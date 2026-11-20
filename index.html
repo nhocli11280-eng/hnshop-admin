@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HNShop - Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      padding: 30px 15px;
+    }
+    .box {
+      max-width: 400px;
+      margin: 50px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+    button {
+      background: #1677ff;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>HNShop - Quản trị</h2>
+    <input id="email" type="email" placeholder="Email đăng nhập">
+    <input id="password" type="password" placeholder="Mật khẩu">
+    <button onclick="login()">Đăng nhập</button>
+    <p id="message"></p>
+  </div>
+
+  <script>
+    const client = window.supabase.createClient(
+      "https://tovdhcylsajhamscnmdm.supabase.co",
+      "sb_publishable_Q6StOz8xw0PK91aAgPAwyQ_lTRl0rU_"
+    );
+
+    async function login() {
+      const message = document.getElementById("message");
+      message.textContent = "Đang đăng nhập...";
+
+      const { data, error } = await client.auth.signInWithPassword({
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value
+      });
+
+      if (error) {
+        message.textContent = "Lỗi: " + error.message;
+        return;
+      }
+
+      if (data.user.app_metadata.role !== "admin") {
+        await client.auth.signOut();
+        message.textContent = "Tài khoản không có quyền quản trị.";
+        return;
+      }
+
+      message.textContent = "Đăng nhập thành công! Xin chào Admin.";
+    }
+  </script>
+</body>
+</html>
