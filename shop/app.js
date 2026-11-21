@@ -13,9 +13,11 @@ const modal = document.getElementById("productModal");
 
 let products = [];
 let categories = [];
+let productPackages = [];
 let activeFilter = "all";
 let currentUser = null;
 let selectedProduct = null;
+let selectedPackage = null;
 let pendingPurchase = null;
 
 function safe(value) {
@@ -96,7 +98,7 @@ async function loadProducts() {
   grid.innerHTML = "<p>Đang tải sản phẩm...</p>";
 
   try {
-    const [productResult, categoryResult] = await Promise.all([
+    const [productResult, categoryResult, packageResult] = await Promise.all([
       db.from("products")
         .select("id,name,description,detail,price,image_url,category_id,is_active,created_at")
         .eq("is_active", true)
@@ -104,14 +106,24 @@ async function loadProducts() {
 
       db.from("categories")
         .select("id,name,slug")
-        .order("name")
+        .order("name"),
+
+      db.from("product_packages")
+        .select("id,product_id,name,price,is_active,sort_order")
+        .eq("is_active", true)
+        .order("sort_order")
     ]);
 
     if (productResult.error) throw productResult.error;
     if (categoryResult.error) throw categoryResult.error;
+    if (packageResult.error) throw packageResult.error;
 
     products = productResult.data || [];
     categories = categoryResult.data || [];
+    productPackages = packageResult.data || [];
+    products.forEach(p => {
+      p.packages = productPackages.filter(x => String(x.product_id) === String(p.id));
+    });
 
     renderFilters();
     render();
@@ -167,11 +179,26 @@ grid.addEventListener("click", event => {
     product.detail || product.description || "";
 
   selectedProduct = product;
+  const packageSelect = document.getElementById("packageSelect");
+  const availablePackages = product.packages || [];
+  selectedPackage = availablePackages[0] || null;
+  packageSelect.innerHTML = availablePackages.map(p =>
+    '<option value="' + safe(p.id) + '">' + safe(p.name) + ' — ' +
+    Number(p.price || 0).toLocaleString("vi-VN") + ' đ</option>'
+  ).join("");
+  packageSelect.disabled = availablePackages.length === 0;
+  const updatePackagePrice = () => {
+    selectedPackage = availablePackages.find(p => String(p.id) === packageSelect.value) || null;
+    const price = selectedPackage ? Number(selectedPackage.price || 0) : Number(product.price || 0);
+    document.getElementById("modalPrice").textContent = price.toLocaleString("vi-VN") + " đ";
+    const buyButton = document.getElementById("buyButton");
+    buyButton.textContent = "Mua key • " + price.toLocaleString("vi-VN") + " đ →";
+  };
+  packageSelect.onchange = updatePackagePrice;
+  updatePackagePrice();
   const buyButton = document.getElementById("buyButton");
   buyButton.href = "#";
   buyButton.target = "_self";
-  buyButton.textContent = "Mua key • " + Number(product.price || 0).toLocaleString("vi-VN") + " đ →";
-  document.getElementById("modalPrice").textContent = Number(product.price || 0).toLocaleString("vi-VN") + " đ";
 
   modal.classList.add("show");
   modal.setAttribute("aria-hidden", "false");
@@ -358,10 +385,10 @@ async function createCustomerOrder(product) {
   try {
     if (!currentUser) throw new Error("Vui lòng đăng nhập trước khi đặt hàng.");
     if (!(await enforceShopAccess())) throw new Error("Tài khoản đã bị khóa khỏi shop.");
-    if (!product || Number(product.price) <= 0) throw new Error("Sản phẩm chưa có giá hợp lệ.");
+    if (!product || !selectedPackage || Number(selectedPackage.price) <= 0) throw new Error("Vui lòng chọn gói key có giá hợp lệ.");
     accountMessage.textContent = "Đang tạo đơn hàng..."; purchaseMessage("");
     const hash = await randomAccessHash();
-    const created = await db.rpc("create_store_order", {p_items:[{product_id:Number(product.id),quantity:1}],p_access_token_hash:hash});
+    const created = await db.rpc("create_store_order", {p_items:[{product_id:Number(product.id),package_id:selectedPackage.id,quantity:1}],p_access_token_hash:hash});
     if (created.error) throw created.error;
     const detail = await db.rpc("get_store_order", {p_access_token_hash:hash});
     if (detail.error) throw detail.error;
