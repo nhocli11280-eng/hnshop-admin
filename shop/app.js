@@ -111,7 +111,6 @@ async function loadProducts() {
 
       db.from("product_packages")
         .select("id,product_id,name,price,is_active,sort_order")
-        .eq("is_active", true)
         .order("sort_order")
     ]);
 
