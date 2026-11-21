@@ -52,3 +52,53 @@
 @keyframes ctaPulse{0%,100%{filter:brightness(1);box-shadow:0 0 14px #fa238d77}50%{filter:brightness(1.18);box-shadow:0 0 27px #fa238dcc,0 0 35px #26dfff55}}
 @keyframes scanMove{from{background-position:0 0}to{background-position:0 80px}}
 @media(prefers-reduced-motion:reduce){.hero,.hero-art,.hero::before,.hero::after,.hero h1,.hero-cta,.hero-scan{animation:none!important}}
+
+
+/* HNShop full-page black + electric-blue gaming theme */
+html{background:#020712!important;min-height:100%}
+body{
+  background-color:#020712!important;
+  background-image:
+    radial-gradient(ellipse at 12% 18%,rgba(0,132,255,.20),transparent 34%),
+    radial-gradient(ellipse at 88% 42%,rgba(0,225,255,.12),transparent 32%),
+    radial-gradient(ellipse at 50% 100%,rgba(24,65,180,.18),transparent 42%),
+    linear-gradient(145deg,#02050d 0%,#061326 48%,#020712 100%)!important;
+  background-size:180% 180%,180% 180%,180% 180%,100% 100%!important;
+  animation:hnPageBlueFlow 22s ease-in-out infinite alternate!important;
+}
+@keyframes hnPageBlueFlow{
+  0%{background-position:0% 0%,100% 20%,50% 100%,0 0}
+  50%{background-position:65% 45%,20% 80%,80% 30%,0 0}
+  100%{background-position:100% 100%,0% 15%,15% 70%,0 0}
+}
+.ambient{opacity:.32!important;filter:blur(115px)!important;animation:hnAmbientDrift 13s ease-in-out infinite alternate}
+.ambient-two{animation-delay:-6s}
+@keyframes hnAmbientDrift{
+  0%{transform:translate3d(-8px,0,0) scale(.82);opacity:.18}
+  50%{transform:translate3d(35px,-28px,0) scale(1.2);opacity:.42}
+  100%{transform:translate3d(-12px,32px,0) scale(.95);opacity:.25}
+}
+.site-header{background:rgba(2,8,19,.94)!important;border-bottom-color:#0877b9!important;box-shadow:0 8px 34px #001b3d99,0 1px 18px #00baff20!important}
+.brand-mark{background:linear-gradient(145deg,#064c83,#061329)!important;border-color:#19bfff!important;box-shadow:0 0 20px #00baff66,inset 0 0 15px #006dff55!important}
+.announcement{background:linear-gradient(100deg,#04182b,#092a4b,#04182b)!important;border-color:#087fba!important;box-shadow:0 0 22px #008dff30!important}
+.hero{background:linear-gradient(120deg,#020916,#06305a 52%,#06112b)!important;border-color:#08bfff!important;box-shadow:0 0 25px #00aaff66,0 0 65px #005bff30,inset 0 0 35px #00aaff22!important;animation:hnHeroBluePulse 4s ease-in-out infinite!important}
+@keyframes hnHeroBluePulse{
+  0%,100%{border-color:#087fbd;box-shadow:0 0 18px #00aaff44,0 0 40px #005bff22,inset 0 0 28px #008cff22}
+  50%{border-color:#45e5ff;box-shadow:0 0 32px #00cfff99,0 0 68px #126bff55,inset 0 0 42px #00aaff44}
+}
+.hero h1{-webkit-text-stroke:1px #8ceaff!important;text-shadow:0 0 12px #00bfff,0 0 30px #087dff,3px 4px 0 #073b79!important;animation:hnTitleBlue 3s ease-in-out infinite alternate!important}
+@keyframes hnTitleBlue{from{filter:brightness(.95);text-shadow:0 0 10px #00bfff,0 0 24px #087dff,3px 4px 0 #073b79}to{filter:brightness(1.25);text-shadow:0 0 18px #39eaff,0 0 42px #087dff,3px 4px 0 #073b79}}
+.hero-subtitle{border-color:#18c9ff!important;background:linear-gradient(90deg,#064b78dd,#071d45dd)!important;box-shadow:0 0 18px #009dff66!important}
+.hero-cta{border-color:#74eaff!important;background:linear-gradient(100deg,#007fc4,#164ce0)!important;box-shadow:0 0 20px #008dff99!important;animation:hnButtonGlow 2.2s ease-in-out infinite!important}
+@keyframes hnButtonGlow{0%,100%{filter:brightness(1);box-shadow:0 0 14px #008dff66}50%{filter:brightness(1.2);box-shadow:0 0 28px #00cfffcc,0 0 38px #155bff77}}
+.hero::before{background:linear-gradient(112deg,transparent 36%,#20dfff33 46%,#ffffff66 49%,#147bff44 53%,transparent 62%)!important}
+.hero::after{background:radial-gradient(ellipse at 18% 20%,#087dff35,transparent 42%),radial-gradient(ellipse at 85% 78%,#00d9ff35,transparent 44%)!important}
+.products-panel{background:linear-gradient(145deg,rgba(3,18,36,.96),rgba(2,9,22,.97))!important;border-color:#124b70!important;box-shadow:0 15px 55px #0008,0 0 25px #007dff18,inset 0 1px #3bdcff12!important}
+.product-card{background:linear-gradient(160deg,#09223b,#030e1e)!important;border-color:#124d73!important}
+.product-card:hover{border-color:#25d5ff!important;box-shadow:0 12px 30px #008dff44,0 0 0 1px #32d4f344!important}
+.filter-btn.active,.detail-btn,.buy-button{background:linear-gradient(110deg,#20d9f5,#2872ff)!important;box-shadow:0 0 18px #078dff55!important}
+.filter-btn.active{color:#031321!important}
+.site-footer{background:#01050d!important;border-top-color:#07578a!important}
+@media(prefers-reduced-motion:reduce){
+  body,.ambient,.hero,.hero h1,.hero-cta{animation:none!important}
+}
