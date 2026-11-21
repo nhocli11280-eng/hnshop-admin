@@ -222,10 +222,17 @@ function hideAccount() {
   accountModal.setAttribute("aria-hidden","true");
   document.body.style.overflow = "";
 }
-function customerLoginId(value) {
-  const username = String(value || "").trim().toLowerCase();
-  if (username.includes("@")) return username;
-  return username + "@hnshop-user.com";
+async function customerLoginId(value) {
+  const username = String(value || "").trim().normalize("NFC");
+  const normalized = username.toLocaleLowerCase("vi");
+  // Giữ nguyên cách ánh xạ cũ để tài khoản chữ/số đã tạo trước đây vẫn đăng nhập được.
+  if (normalized.includes("@")) return normalized;
+  if (/^[a-z0-9._-]{3,24}$/.test(normalized)) return normalized + "@hnshop-user.com";
+  // Tên tự do (có dấu cách, tiếng Việt, ký tự đặc biệt) được ánh xạ ổn định sang email nội bộ hợp lệ.
+  const bytes = new TextEncoder().encode(normalized);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const hash = Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, "0")).join("");
+  return "u" + hash.slice(0, 40) + "@hnshop-user.com";
 }
 function refreshAccountUI() {
   const logged = !!currentUser;
@@ -249,28 +256,34 @@ document.getElementById("accountOpen").addEventListener("click",showAccount);
 document.getElementById("accountClose").addEventListener("click",hideAccount);
 accountModal.addEventListener("click",e=>{if(e.target===accountModal)hideAccount();});
 document.getElementById("accountLogin").addEventListener("click",async()=>{
-  const username=document.getElementById("accountEmail").value.trim().toLowerCase();
+  const username=document.getElementById("accountEmail").value.trim().normalize("NFC");
   const password=document.getElementById("accountPassword").value;
-  if(!username.includes("@") && !/^[a-z0-9._-]{3,24}$/.test(username)) { accountMessage.textContent="Tên tài khoản gồm 3–24 ký tự: chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang."; return; }
+  if(!username || Array.from(username).length>40) { accountMessage.textContent="Vui lòng nhập tên tài khoản (tối đa 40 ký tự)."; return; }
   if(!password) { accountMessage.textContent="Vui lòng nhập mật khẩu."; return; }
   accountMessage.textContent="Đang đăng nhập...";
+  document.getElementById("accountLogin").disabled=true;
   try {
-    const {data,error}=await db.auth.signInWithPassword({email:customerLoginId(username),password});
+    const loginId=await customerLoginId(username);
+    const {data,error}=await db.auth.signInWithPassword({email:loginId,password});
     if(error) throw error;
     currentUser=data.user;
     accountMessage.textContent="Đăng nhập thành công.";
     refreshAccountUI();
     if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
   } catch(e) { accountMessage.textContent="Không đăng nhập được: "+(e.message||e); }
+  finally { document.getElementById("accountLogin").disabled=false; }
 });
 document.getElementById("accountSignup").addEventListener("click",async()=>{
-  const username=document.getElementById("accountEmail").value.trim().toLowerCase();
+  const username=document.getElementById("accountEmail").value.trim().normalize("NFC");
   const password=document.getElementById("accountPassword").value;
-  if(!/^[a-z0-9._-]{3,24}$/.test(username)) { accountMessage.textContent="Tên tài khoản gồm 3–24 ký tự: chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang."; return; }
+  if(!username || Array.from(username).length>40) { accountMessage.textContent="Tên tài khoản không được để trống và tối đa 40 ký tự."; return; }
+  if(username.includes("@")) { accountMessage.textContent="Tên tài khoản không cần nhập email hoặc ký tự @."; return; }
   if(password.length<6) { accountMessage.textContent="Mật khẩu cần ít nhất 6 ký tự."; return; }
   accountMessage.textContent="Đang tạo tài khoản...";
+  document.getElementById("accountSignup").disabled=true;
   try {
-    const {data,error}=await db.auth.signUp({email:customerLoginId(username),password,options:{data:{username}}});
+    const loginId=await customerLoginId(username);
+    const {data,error}=await db.auth.signUp({email:loginId,password,options:{data:{username}}});
     if(error) throw error;
     if(data.session) {
       currentUser=data.user;
@@ -278,9 +291,10 @@ document.getElementById("accountSignup").addEventListener("click",async()=>{
       refreshAccountUI();
       if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
     } else {
-      accountMessage.textContent="Tài khoản đã được tạo. Nếu chưa tự đăng nhập, hãy đăng nhập bằng tên tài khoản và mật khẩu vừa đăng ký." ;
+      accountMessage.textContent="Tài khoản đã được tạo nhưng Supabase đang yêu cầu xác nhận email. Admin cần tắt Confirm email trong Authentication → Providers → Email.";
     }
   } catch(e) { accountMessage.textContent="Không tạo được tài khoản: "+(e.message||e); }
+  finally { document.getElementById("accountSignup").disabled=false; }
 });
 document.getElementById("accountLogout").addEventListener("click",async()=>{
   const {error}=await db.auth.signOut();
