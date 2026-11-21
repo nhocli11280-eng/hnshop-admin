@@ -19,6 +19,7 @@ let currentUser = null;
 let selectedProduct = null;
 let selectedPackage = null;
 let pendingPurchase = null;
+let paymentCountdownInterval = null;
 
 function safe(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -306,6 +307,7 @@ async function registerShopCustomer() {
 }
 
 document.getElementById("accountOpen").addEventListener("click",showAccount);
+document.getElementById("historyOpen").addEventListener("click",()=>{ showAccount(); if(currentUser) loadMyOrders(); else accountMessage.textContent="Đăng nhập để xem lịch sử mua hàng."; });
 document.getElementById("accountClose").addEventListener("click",hideAccount);
 accountModal.addEventListener("click",e=>{if(e.target===accountModal)hideAccount();});
 document.getElementById("accountLogin").addEventListener("click",async()=>{
@@ -381,6 +383,32 @@ async function randomAccessHash() {
   return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, "0")).join("");
 }
 function purchaseMessage(html) { document.getElementById("purchasePanel").innerHTML = html; }
+function formatPurchaseDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Không rõ" : date.toLocaleString("vi-VN", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+}
+function packageDays(name) {
+  const match = String(name || "").match(/(\d+)\s*(?:ngày|day|days|d)\b/i);
+  return match ? Number(match[1]) : null;
+}
+function startPaymentCountdown(createdAt) {
+  if (paymentCountdownInterval) clearInterval(paymentCountdownInterval);
+  const created = new Date(createdAt || Date.now()).getTime();
+  const expiresAt = (Number.isFinite(created) ? created : Date.now()) + 10 * 60 * 1000;
+  const tick = () => {
+    const node = document.getElementById("paymentCountdown");
+    if (!node) { clearInterval(paymentCountdownInterval); paymentCountdownInterval = null; return; }
+    const remaining = Math.max(0, expiresAt - Date.now());
+    node.textContent = String(Math.floor(remaining / 60000)).padStart(2,"0") + ":" + String(Math.floor((remaining % 60000) / 1000)).padStart(2,"0");
+    const note = document.getElementById("paymentCountdownNote");
+    if (remaining <= 0) {
+      node.classList.add("countdown-expired");
+      if (note) note.textContent = "Đã hết 10 phút giữ thông tin thanh toán. Đơn vẫn chờ Admin kiểm tra; vui lòng liên hệ shop nếu bạn đã chuyển khoản.";
+      clearInterval(paymentCountdownInterval); paymentCountdownInterval = null;
+    } else if (note) note.textContent = "Vui lòng hoàn tất chuyển khoản trong thời gian này.";
+  };
+  tick(); paymentCountdownInterval = setInterval(tick,1000);
+}
 async function createCustomerOrder(product) {
   try {
     if (!currentUser) throw new Error("Vui lòng đăng nhập trước khi đặt hàng.");
@@ -397,7 +425,8 @@ async function createCustomerOrder(product) {
     const setting = await db.from("payment_settings").select("qr_image_url").eq("id",1).maybeSingle();
     const qrUrl = !setting.error && setting.data ? setting.data.qr_image_url || "" : "";
     accountMessage.textContent = "Đơn hàng đã được tạo. Chuyển khoản đúng nội dung bên dưới.";
-    purchaseMessage('<div class="purchase-card"><h3>Đơn hàng của bạn</h3><p><b>Mã đơn:</b> '+safe(order.id)+'</p><p><b>Số tiền:</b> '+moneyVND(order.total)+'</p><p><b>Nội dung chuyển khoản:</b></p><div class="transfer-note">'+safe(order.transfer_note || "")+'</div>'+(qrUrl?'<img class="payment-qr" src="'+safe(qrUrl)+'" alt="QR thanh toán HNShop">':'<p class="purchase-warning">Admin chưa cài ảnh QR thanh toán. Vui lòng liên hệ HNShop trước khi chuyển khoản.</p>')+'<p class="purchase-warning">Đơn chỉ được xử lý sau khi Admin kiểm tra giao dịch MB Bank.</p><button type="button" class="buy-button" id="refreshMyOrders">Xem lịch sử mua hàng</button></div>');
+    purchaseMessage('<div class="purchase-card"><h3>Đơn hàng của bạn</h3><p><b>Mã đơn:</b> '+safe(order.id)+'</p><p><b>Ngày giờ tạo đơn:</b> '+safe(formatPurchaseDate(order.created_at || new Date().toISOString()))+'</p><p><b>Số tiền:</b> '+moneyVND(order.total)+'</p><div class="payment-countdown"><span>Thời gian thanh toán còn lại</span><strong id="paymentCountdown">10:00</strong><small id="paymentCountdownNote">Vui lòng hoàn tất chuyển khoản trong thời gian này.</small></div><p><b>Nội dung chuyển khoản:</b></p><div class="transfer-note">'+safe(order.transfer_note || "")+'</div>'+(qrUrl?'<img class="payment-qr" src="'+safe(qrUrl)+'" alt="QR thanh toán HNShop">':'<p class="purchase-warning">Admin chưa cài ảnh QR thanh toán. Vui lòng liên hệ HNShop trước khi chuyển khoản.</p>')+'<p class="purchase-warning">Đơn chỉ được xử lý sau khi Admin kiểm tra giao dịch MB Bank. Đồng hồ 10 phút chỉ nhắc thời gian thanh toán, không tự hủy đơn.</p><button type="button" class="buy-button" id="refreshMyOrders">Xem lịch sử mua hàng</button></div>');
+    startPaymentCountdown(order.created_at || new Date().toISOString());
     document.getElementById("refreshMyOrders").addEventListener("click",loadMyOrders);
   } catch(e) { accountMessage.textContent = "Không tạo được đơn hàng: " + (e.message || e); }
 }
@@ -409,10 +438,12 @@ async function loadMyOrders() {
     if (!orders.length) { panel.innerHTML='<div class="purchase-card"><h3>Lịch sử mua hàng</h3><p>Bạn chưa có đơn hàng nào.</p></div>'; return; }
     let html='<div class="purchase-card"><h3>Lịch sử mua hàng</h3>';
     orders.forEach(o => {
-      html+='<div class="history-order"><p><b>Mã đơn:</b> '+safe(o.id)+'</p><p><b>Ngày tạo:</b> '+safe(new Date(o.created_at).toLocaleString("vi-VN"))+'</p><p><b>Tổng tiền:</b> '+moneyVND(o.total)+'</p><p><b>Trạng thái:</b> '+safe(o.status)+'</p>';
+      html+='<div class="history-order"><p><b>Mã đơn:</b> '+safe(o.id)+'</p><p><b>Ngày giờ mua:</b> '+safe(formatPurchaseDate(o.created_at))+'</p><p><b>Tổng số tiền:</b> '+moneyVND(o.total)+'</p><p><b>Trạng thái:</b> '+safe(o.status)+'</p>';
       if(o.status==="pending") html+='<p class="purchase-warning">Đang chờ Admin xác nhận thanh toán.</p>';
       (o.items||[]).forEach(item => {
-        html+='<div class="history-item"><b>'+safe(item.product_name)+' — '+safe(item.package_name || "Gói key")+' × '+safe(item.quantity)+'</b>';
+        const days = packageDays(item.package_name);
+        const lineTotal = Number(item.price || 0) * Number(item.quantity || 1);
+        html+='<div class="history-item"><b>'+safe(item.product_name)+' — '+safe(item.package_name || "Gói key")+' × '+safe(item.quantity)+'</b><p><b>Thời hạn:</b> '+(days ? safe(days)+" ngày" : "Chưa ghi rõ số ngày trong tên gói")+'</p><p><b>Thành tiền:</b> '+moneyVND(lineTotal)+'</p>';
         if(item.keys&&item.keys.length) html+='<p>Key đã cấp:</p>'+item.keys.map(k=>'<code class="customer-key">'+safe(k)+'</code>').join("");
         else html+='<p class="purchase-warning">Key sẽ hiển thị tại đây sau khi Admin xác nhận đã nhận tiền.</p>';
         html+='</div>';
