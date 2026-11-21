@@ -231,6 +231,25 @@ tr:hover td{background:rgba(0,145,220,.055)}
 </table>
 </div>
 </div>
+<div class="panel">
+<h3>Quản lý gói key theo sản phẩm</h3>
+<p>Chọn sản phẩm rồi tạo các gói Key ngày, 7 ngày, 30 ngày, Key mùa hoặc gói riêng.</p>
+<label>Sản phẩm</label><select id="packageProduct"></select>
+<input type="hidden" id="packageId">
+<div class="form-grid">
+ <div><label>Tên gói</label><input id="packageName" placeholder="Ví dụ: Key 7 ngày"></div>
+ <div><label>Giá gói (VNĐ)</label><input id="packagePrice" type="number" min="0" step="any" placeholder="Ví dụ: 15000"></div>
+</div>
+<label><input id="packageActive" type="checkbox" checked style="width:auto"> Đang bán</label>
+<div class="actions">
+ <button id="savePackage">Lưu gói</button>
+ <button class="secondary" id="clearPackage">Làm mới</button>
+</div>
+<div class="table-wrap" style="margin-top:14px"><table>
+ <thead><tr><th>Tên gói</th><th>Giá</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody id="packageRows"><tr><td colspan="4">Chọn sản phẩm để xem gói.</td></tr></tbody>
+</table></div>
+</div>
 </section>
 
 <section id="categories" class="page hidden">
@@ -677,7 +696,56 @@ async function loadProducts() {
    </tr>
   `).join('')
   : '<tr><td colspan="4">Chưa có sản phẩm</td></tr>';
+ await loadPackageProducts();
 }
+
+/* QUẢN LÝ GÓI KEY */
+async function loadPackageProducts() {
+ const sel=$('packageProduct');
+ const previous=sel.value;
+ sel.innerHTML=products.map(p=>`<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+ if(previous && products.some(p=>String(p.id)===previous)) sel.value=previous;
+ await loadProductPackages();
+}
+async function loadProductPackages() {
+ const productId=$('packageProduct').value;
+ const body=$('packageRows');
+ if(!productId){body.innerHTML='<tr><td colspan="4">Chưa có sản phẩm.</td></tr>';return;}
+ const rows=await run(db.from('product_packages').select('*').eq('product_id',productId).order('sort_order').order('created_at'));
+ body.innerHTML=rows.length?rows.map(x=>`
+  <tr><td>${escapeHTML(x.name)}</td><td>${money(x.price)}</td><td>${x.is_active?'Đang bán':'Đã ẩn'}</td>
+  <td><div class="actions"><button onclick="editPackage('${x.id}')">Sửa</button><button class="danger" onclick="deletePackage('${x.id}')">Xóa</button></div></td></tr>
+ `).join(''):'<tr><td colspan="4">Chưa có gói key. Hãy thêm gói đầu tiên.</td></tr>';
+ window.currentProductPackages=rows;
+}
+window.editPackage=id=>{
+ const x=(window.currentProductPackages||[]).find(p=>p.id===id);if(!x)return;
+ $('packageId').value=x.id;$('packageName').value=x.name;$('packagePrice').value=x.price;
+ $('packageActive').checked=x.is_active!==false;
+};
+window.deletePackage=async id=>{
+ if(!confirm('Xóa gói key này? Gói đã được dùng trong đơn hàng có thể không xóa được.'))return;
+ try{await run(db.from('product_packages').delete().eq('id',id));clearPackageForm();await loadProductPackages();message('Đã xóa gói key.');}catch(e){fail(e);}
+};
+function clearPackageForm(){['packageId','packageName','packagePrice'].forEach(id=>$(id).value='');$('packageActive').checked=true;}
+$('packageProduct').addEventListener('change',()=>{clearPackageForm();loadProductPackages().catch(fail);});
+$('clearPackage').onclick=clearPackageForm;
+$('savePackage').onclick=async()=>{
+ const btn=$('savePackage');
+ try{
+  btn.disabled=true;
+  const productId=$('packageProduct').value,name=$('packageName').value.trim(),priceText=$('packagePrice').value;
+  const price=Number(priceText);
+  if(!productId)throw Error('Chọn sản phẩm trước.');
+  if(!name)throw Error('Nhập tên gói key.');
+  if(priceText===''||!Number.isFinite(price)||price<0)throw Error('Giá gói không hợp lệ.');
+  const row={product_id:Number(productId),name,price,is_active:$('packageActive').checked};
+  const id=$('packageId').value;
+  if(id)await run(db.from('product_packages').update(row).eq('id',id).select().single());
+  else await run(db.from('product_packages').insert(row).select().single());
+  clearPackageForm();await loadProductPackages();message('Đã lưu gói key.');
+ }catch(e){fail(e);}finally{btn.disabled=false;}
+};
 
 /* LƯU SẢN PHẨM: kiểm tra dữ liệu và xác nhận bản ghi trả về */
 $('saveProduct').onclick = async () => {
