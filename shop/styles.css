@@ -32,3 +32,23 @@
 .history-order{padding:12px 0;border-top:1px solid #1c3a54}
 .history-item{margin-top:10px;padding:10px;border-radius:9px;background:#0b2035}
 .customer-key{display:block;margin:6px 0;padding:9px;background:#03101d;border:1px solid #27617b;border-radius:7px;color:#8ff4c7;overflow-wrap:anywhere;white-space:normal}
+
+
+/* HNShop animated cyber-gaming hero */
+.hero{isolation:isolate;box-shadow:0 0 24px #00cfff55,0 0 55px #8b35ff33,inset 0 0 35px #2d7fff33;animation:heroNeonPulse 4s ease-in-out infinite}
+.hero-art{transform-origin:center;animation:heroSlowZoom 18s ease-in-out infinite alternate,heroColorShift 8s ease-in-out infinite}
+.hero::before{content:"";position:absolute;inset:-35%;z-index:1;pointer-events:none;background:linear-gradient(112deg,transparent 38%,#40eaff22 46%,#ffffff44 49%,#d34dff33 52%,transparent 60%);transform:translateX(-70%) skewX(-12deg);animation:heroLightSweep 6s ease-in-out infinite}
+.hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 18% 20%,#a52cff22,transparent 42%),radial-gradient(ellipse at 85% 78%,#00d9ff22,transparent 44%);mix-blend-mode:screen;animation:heroEnergy 5s ease-in-out infinite alternate}
+.hero-content{z-index:2}
+.hero h1{animation:titleGlow 2.8s ease-in-out infinite alternate}
+.hero-cta{animation:ctaPulse 2s ease-in-out infinite}
+.hero-scan{position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 5px,#9deaff08 6px 7px);opacity:.25;animation:scanMove 8s linear infinite}
+@keyframes heroSlowZoom{from{transform:scale(1)}to{transform:scale(1.09)}}
+@keyframes heroColorShift{0%,100%{filter:saturate(1.08) brightness(.98)}50%{filter:saturate(1.35) brightness(1.12)}}
+@keyframes heroLightSweep{0%{transform:translateX(-75%) skewX(-12deg);opacity:0}18%{opacity:1}58%,100%{transform:translateX(75%) skewX(-12deg);opacity:0}}
+@keyframes heroEnergy{from{opacity:.35}to{opacity:1}}
+@keyframes heroNeonPulse{0%,100%{border-color:#25c9ed;box-shadow:0 0 18px #00bde844,0 0 35px #753bff22,inset 0 0 30px #2d7fff22}50%{border-color:#b34cff;box-shadow:0 0 28px #00d9ff77,0 0 55px #a22fff55,inset 0 0 40px #2d7fff44}}
+@keyframes titleGlow{from{text-shadow:3px 4px 0 #9d1458,0 0 14px #ff2b9a,0 0 25px #6d7dff}to{text-shadow:3px 4px 0 #5a2bb0,0 0 22px #ff58c4,0 0 42px #29dfff}}
+@keyframes ctaPulse{0%,100%{filter:brightness(1);box-shadow:0 0 14px #fa238d77}50%{filter:brightness(1.18);box-shadow:0 0 27px #fa238dcc,0 0 35px #26dfff55}}
+@keyframes scanMove{from{background-position:0 0}to{background-position:0 80px}}
+@media(prefers-reduced-motion:reduce){.hero,.hero-art,.hero::before,.hero::after,.hero h1,.hero-cta,.hero-scan{animation:none!important}}
