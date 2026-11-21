@@ -75,6 +75,7 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 <button data-page="customers">Khách hàng</button>
 <button data-page="storeOrders">Đơn hàng cửa hàng</button>
 <button data-page="keys">Kho key</button>
+<button data-page="payment">Cài đặt thanh toán</button>
 </nav>
 
 <main>
@@ -191,6 +192,18 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 </table></div>
 </div>
 <div class="panel" id="storeOrderDetail">Chọn một đơn để xem chi tiết.</div>
+</section>
+
+<section id="payment" class="page hidden">
+<h2>Cài đặt thanh toán</h2>
+<div class="panel">
+<p>Tải ảnh QR ngân hàng lên đây. Ảnh đang dùng sẽ được lưu trên Supabase và có thể thay đổi bất cứ lúc nào.</p>
+<label>Ảnh QR thanh toán</label>
+<input id="paymentQrFile" type="file" accept="image/png,image/jpeg,image/webp">
+<div style="margin:12px 0"><img id="paymentQrPreview" alt="QR thanh toán hiện tại" style="display:none;max-width:280px;width:100%;border:1px solid #ddd;border-radius:10px;padding:8px"></div>
+<p id="paymentQrStatus" aria-live="polite">Đang tải cài đặt...</p>
+<button id="savePaymentQr">Lưu và áp dụng QR</button>
+</div>
 </section>
 
 <section id="keys" class="page hidden">
@@ -359,6 +372,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'customers') await loadCustomers();
    if(btn.dataset.page === 'keys') await loadKeyProducts();
    if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
+   if(btn.dataset.page === 'payment') await loadPaymentSettings();
   } catch(e) {
    fail(e);
   }
@@ -984,6 +998,41 @@ window.confirmStoreOrder = async id => {
  }
 };
 $('refreshStoreOrders').onclick = loadStoreOrders;
+
+/* CÀI ĐẶT QR THANH TOÁN */
+async function loadPaymentSettings() {
+ $('paymentQrStatus').textContent = 'Đang tải QR hiện tại...';
+ try {
+  const rows = await run(db.from('payment_settings').select('id,qr_image_url').eq('id',1).limit(1));
+  const url = rows[0]?.qr_image_url || '';
+  const img = $('paymentQrPreview');
+  if(url) { img.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(); img.style.display = 'block'; }
+  else { img.removeAttribute('src'); img.style.display = 'none'; }
+  $('paymentQrStatus').textContent = url ? 'QR thanh toán hiện tại' : 'Chưa cài ảnh QR. Hãy chọn ảnh và lưu.';
+ } catch(e) {
+  $('paymentQrStatus').textContent = 'Không tải được cài đặt. Hãy chạy SQL tạo bảng payment_settings trước: ' + (e.message || e);
+ }
+}
+$('savePaymentQr').onclick = async () => {
+ const btn = $('savePaymentQr');
+ try {
+  const file = $('paymentQrFile').files[0];
+  if(!file) throw Error('Bạn chưa chọn ảnh QR.');
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)) throw Error('Chỉ hỗ trợ ảnh PNG, JPG hoặc WEBP.');
+  if(file.size > 5 * 1024 * 1024) throw Error('Ảnh QR tối đa 5 MB.');
+  btn.disabled = true; btn.textContent = 'Đang tải ảnh...';
+  const path = 'payment-qr/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const {data,error} = await db.storage.from('hnshop-images').upload(path,file,{contentType:file.type,upsert:false});
+  if(error) throw error;
+  const url = db.storage.from('hnshop-images').getPublicUrl(data.path).data.publicUrl;
+  await run(db.from('payment_settings').upsert({id:1,qr_image_url:url,updated_at:new Date().toISOString()},{onConflict:'id'}).select().single());
+  $('paymentQrFile').value = '';
+  await loadPaymentSettings();
+  $('paymentQrStatus').textContent = 'Đã lưu và áp dụng QR mới thành công.';
+ } catch(e) {
+  $('paymentQrStatus').textContent = 'Không lưu được QR: ' + (e.message || e);
+ } finally { btn.disabled = false; btn.textContent = 'Lưu và áp dụng QR'; }
+};
 
 /* KHÁCH HÀNG */
 async function loadCustomers() {
