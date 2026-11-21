@@ -1,74 +1,393 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HNShop - Admin</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      padding: 30px 15px;
-    }
-    .box {
-      max-width: 400px;
-      margin: 50px auto;
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      box-sizing: border-box;
-    }
-    button {
-      background: #1677ff;
-      color: white;
-      border: 0;
-      border-radius: 6px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HNShop Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f9;color:#20283a}
+button,input,select,textarea{font:inherit;padding:10px;border:1px solid #d8deea;border-radius:7px}
+button{cursor:pointer;background:#182b50;color:white;border:0}
+button.danger{background:#bd3545}
+button.secondary{background:#e7ebf3;color:#24334e}
+input,select,textarea{width:100%;margin:5px 0 12px;background:white}
+h1,h2,h3{margin-top:0}
+.hidden{display:none!important}
+#login{max-width:400px;margin:12vh auto;background:white;padding:28px;border-radius:14px;box-shadow:0 5px 25px #0001}
+#app{display:none;min-height:100vh}
+header{background:#172b50;color:white;padding:16px 22px;display:flex;justify-content:space-between;align-items:center}
+.layout{display:flex;min-height:calc(100vh - 60px)}
+nav{width:210px;background:#fff;padding:15px;flex-shrink:0}
+nav button{display:block;width:100%;text-align:left;margin-bottom:8px;background:white;color:#24334e}
+nav button.active,nav button:hover{background:#e9effb;color:#174b9a}
+main{padding:22px;flex:1;min-width:0}
+.panel{background:white;border-radius:12px;padding:18px;margin-bottom:18px;box-shadow:0 2px 12px #00000008}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:white;padding:18px;border-radius:10px}
+.stat strong{display:block;font-size:25px;margin-top:8px}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14px}
+.table-wrap{overflow:auto}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions button{padding:7px 10px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+#message{padding:10px;margin:10px 0;border-radius:7px;display:none}
+@media(max-width:650px){
+ .layout{display:block}
+ nav{width:100%;display:flex;overflow:auto;gap:5px}
+ nav button{white-space:nowrap;width:auto}
+ main{padding:12px}
+ header{padding:13px}
+}
+</style>
 </head>
 <body>
-  <div class="box">
-    <h2>HNShop - Quản trị</h2>
-    <input id="email" type="email" placeholder="Email đăng nhập">
-    <input id="password" type="password" placeholder="Mật khẩu">
-    <button onclick="login()">Đăng nhập</button>
-    <p id="message"></p>
-  </div>
 
-  <script>
-    const client = window.supabase.createClient(
-      "https://tovdhcylsajhamscnmdm.supabase.co",
-      "sb_publishable_Q6StOz8xw0PK91aAgPAwyQ_lTRl0rU_"
-    );
+<section id="login">
+<h2>HNShop Admin</h2>
+<p>Đăng nhập tài khoản quản trị</p>
+<label>Email</label>
+<input id="email" type="email" placeholder="Email Admin">
+<label>Mật khẩu</label>
+<input id="password" type="password" placeholder="Mật khẩu">
+<button id="loginBtn" style="width:100%">Đăng nhập</button>
+<p id="loginMsg"></p>
+</section>
 
-    async function login() {
-      const message = document.getElementById("message");
-      message.textContent = "Đang đăng nhập...";
+<div id="app">
+<header>
+<strong>HNShop ADMIN</strong>
+<button id="logoutBtn">Đăng xuất</button>
+</header>
+<div class="layout">
+<nav>
+<button data-page="dashboard" class="active">Tổng quan</button>
+<button data-page="products">Sản phẩm</button>
+<button data-page="categories">Danh mục</button>
+<button data-page="banners">Banner</button>
+<button data-page="orders">Đơn hàng</button>
+<button data-page="customers">Khách hàng</button>
+</nav>
+<main>
+<div id="message"></div>
+<section id="dashboard" class="page">
+<h2>Tổng quan</h2>
+<div class="stats">
+<div class="stat">Sản phẩm<strong id="statProducts">0</strong></div>
+<div class="stat">Danh mục<strong id="statCategories">0</strong></div>
+<div class="stat">Đơn hàng<strong id="statOrders">0</strong></div>
+<div class="stat">Khách hàng<strong id="statCustomers">0</strong></div>
+</div>
+<div class="panel" style="margin-top:18px">
+<h3>Đơn hàng gần đây</h3>
+<div id="recentOrders"></div>
+</div>
+</section>
 
-      const { data, error } = await client.auth.signInWithPassword({
-        email: document.getElementById("email").value,
-        password: document.getElementById("password").value
-      });
+<section id="products" class="page hidden">
+<h2>Quản lý sản phẩm</h2>
+<div class="panel">
+<h3 id="productFormTitle">Thêm sản phẩm</h3>
+<input type="hidden" id="productId">
+<div class="form-grid">
+<div><label>Tên sản phẩm</label><input id="pName"></div>
+<div><label>Giá</label><input id="pPrice" type="number" min="0"></div>
+<div><label>Danh mục</label><select id="pCategory"></select></div>
+<div><label>Ảnh sản phẩm</label><input id="pImage" type="file" accept="image/*"></div>
+</div>
+<label>Mô tả ngắn</label><textarea id="pDescription"></textarea>
+<label>Chi tiết</label><textarea id="pDetail"></textarea>
+<label><input id="pActive" type="checkbox" checked style="width:auto"> Đang hiển thị</label>
+<button id="saveProduct">Lưu sản phẩm</button>
+<button class="secondary" id="cancelProduct">Hủy</button>
+</div>
+<div class="panel"><div class="table-wrap"><table>
+<thead><tr><th>Tên</th><th>Giá</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<tbody id="productRows"></tbody>
+</table></div></div>
+</section>
 
-      if (error) {
-        message.textContent = "Lỗi: " + error.message;
-        return;
-      }
+<section id="categories" class="page hidden">
+<h2>Quản lý danh mục</h2>
+<div class="panel">
+<input type="hidden" id="categoryId">
+<label>Tên danh mục</label><input id="categoryName">
+<label>Slug</label><input id="categorySlug">
+<button id="saveCategory">Lưu danh mục</button>
+<button class="secondary" id="cancelCategory">Hủy</button>
+</div>
+<div class="panel table-wrap"><table>
+<thead><tr><th>ID</th><th>Tên</th><th>Slug</th><th>Thao tác</th></tr></thead>
+<tbody id="categoryRows"></tbody>
+</table></div>
+</section>
 
-      if (data.user.app_metadata.role !== "admin") {
-        await client.auth.signOut();
-        message.textContent = "Tài khoản không có quyền quản trị.";
-        return;
-      }
+<section id="banners" class="page hidden">
+<h2>Quản lý banner</h2>
+<div class="panel">
+<input type="hidden" id="bannerId">
+<label>Tiêu đề</label><input id="bTitle">
+<label>Ảnh banner</label><input id="bImage" type="file" accept="image/*">
+<label><input id="bActive" type="checkbox" checked style="width:auto"> Đang hiển thị</label>
+<button id="saveBanner">Lưu banner</button>
+<button class="secondary" id="cancelBanner">Hủy</button>
+</div>
+<div class="panel table-wrap"><table>
+<thead><tr><th>Tiêu đề</th><th>Ảnh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<tbody id="bannerRows"></tbody>
+</table></div>
+</section>
 
-      message.textContent = "Đăng nhập thành công! Xin chào Admin.";
-    }
-  </script>
+<section id="orders" class="page hidden">
+<h2>Quản lý đơn hàng</h2>
+<div class="panel table-wrap"><table>
+<thead><tr><th>Mã</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+<tbody id="orderRows"></tbody>
+</table></div>
+<div class="panel" id="orderDetail"></div>
+</section>
+
+<section id="customers" class="page hidden">
+<h2>Quản lý khách hàng</h2>
+<div class="panel table-wrap"><table>
+<thead><tr><th>ID</th><th>Họ tên</th><th>Điện thoại</th><th>Email</th><th>Ngày tạo</th></tr></thead>
+<tbody id="customerRows"></tbody>
+</table></div>
+</section>
+</main>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://tovdhcylsajhamscnmdm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Q6StOz8xw0PK91aAgPAwyQ_lTRl0rU_';
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+let categories = [], products = [], banners = [];
+
+function message(text,error=false){
+ const el=$('message'); el.textContent=text;
+ el.style.display='block'; el.style.background=error?'#ffe5e5':'#e2f7e9';
+ el.style.color=error?'#a21d2b':'#176b37';
+}
+function fail(error){message(error.message||String(error),true)}
+function money(value){return Number(value||0).toLocaleString('vi-VN')+' đ'}
+function date(value){return value?new Date(value).toLocaleString('vi-VN'):''}
+function escapeHTML(value){
+ return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function run(query){
+ const {data,error}=await query;
+ if(error) throw error;
+ return data;
+}
+
+async function checkSession(){
+ const {data,error}=await db.auth.getSession();
+ if(error) return fail(error);
+ if(data.session) await verifyAdmin();
+}
+async function verifyAdmin(){
+ const {data,error}=await db.auth.getUser();
+ if(error||!data.user){$('login').style.display='block';$('app').style.display='none';return}
+ if(data.user.app_metadata?.role!=='admin'){
+  await db.auth.signOut();
+  $('loginMsg').textContent='Tài khoản không có quyền Admin.';
+  return;
+ }
+ $('login').style.display='none';$('app').style.display='block';
+ await loadDashboard();
+}
+$('loginBtn').onclick=async()=>{
+ $('loginMsg').textContent='Đang đăng nhập...';
+ const {error}=await db.auth.signInWithPassword({
+  email:$('email').value.trim(),password:$('password').value
+ });
+ if(error){$('loginMsg').textContent=error.message;return}
+ await verifyAdmin();
+};
+$('logoutBtn').onclick=async()=>{await db.auth.signOut();location.reload()};
+
+document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ btn.classList.add('active');
+ document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));
+ $(btn.dataset.page).classList.remove('hidden');
+ if(btn.dataset.page==='products')loadProducts();
+ if(btn.dataset.page==='categories')loadCategories();
+ if(btn.dataset.page==='banners')loadBanners();
+ if(btn.dataset.page==='orders')loadOrders();
+ if(btn.dataset.page==='customers')loadCustomers();
+});
+
+async function loadDashboard(){
+ try{
+  const [p,c,o,u]=await Promise.all([
+   run(db.from('products').select('id',{count:'exact',head:true})),
+   run(db.from('categories').select('id',{count:'exact',head:true})),
+   run(db.from('orders').select('id',{count:'exact',head:true})),
+   run(db.from('customers').select('id',{count:'exact',head:true}))
+  ]);
+  $('statProducts').textContent=p.length??'—';
+  $('statCategories').textContent=c.length??'—';
+  $('statOrders').textContent=o.length??'—';
+  $('statCustomers').textContent=u.length??'—';
+  const recent=await run(db.from('orders').select('id,total,status,created_at').order('created_at',{ascending:false}).limit(5));
+  $('recentOrders').innerHTML=recent.length?recent.map(x=>`<p>Đơn #${x.id} — ${money(x.total)} — ${escapeHTML(x.status)}</p>`).join(''):'Chưa có đơn hàng';
+ }catch(e){fail(e)}
+}
+
+async function loadCategories(){
+ try{
+  categories=await run(db.from('categories').select('*').order('id'));
+  $('categoryRows').innerHTML=categories.map(x=>`<tr><td>${x.id}</td><td>${escapeHTML(x.name)}</td><td>${escapeHTML(x.slug)}</td><td><div class="actions"><button onclick="editCategory(${x.id})">Sửa</button><button class="danger" onclick="deleteCategory(${x.id})">Xóa</button></div></td></tr>`).join('');
+  $('pCategory').innerHTML='<option value="">Không chọn</option>'+categories.map(x=>`<option value="${x.id}">${escapeHTML(x.name)}</option>`).join('');
+ }catch(e){fail(e)}
+}
+$('saveCategory').onclick=async()=>{
+ try{
+  const id=$('categoryId').value;
+  const row={name:$('categoryName').value.trim(),slug:$('categorySlug').value.trim()};
+  if(!row.name||!row.slug)throw Error('Nhập tên và slug danh mục');
+  await run(id?db.from('categories').update(row).eq('id',id):db.from('categories').insert(row));
+  $('categoryId').value='';$('categoryName').value='';$('categorySlug').value='';
+  await loadCategories();message('Đã lưu danh mục');
+ }catch(e){fail(e)}
+};
+window.editCategory=id=>{
+ const x=categories.find(a=>a.id===id);if(!x)return;
+ $('categoryId').value=x.id;$('categoryName').value=x.name;$('categorySlug').value=x.slug;
+};
+window.deleteCategory=async id=>{
+ if(!confirm('Xóa danh mục này?'))return;
+ try{await run(db.from('categories').delete().eq('id',id));await loadCategories();message('Đã xóa danh mục')}
+ catch(e){fail(e)}
+};
+$('cancelCategory').onclick=()=>{$('categoryId').value='';$('categoryName').value='';$('categorySlug').value=''};
+
+async function uploadImage(file){
+ if(!file)return null;
+ if(!file.type.startsWith('image/'))throw Error('Chỉ được tải file ảnh');
+ if(file.size>5*1024*1024)throw Error('Ảnh tối đa 5 MB');
+ const path=Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+ const {data,error}=await db.storage.from('hnshop-images').upload(path,file);
+ if(error)throw error;
+ return db.storage.from('hnshop-images').getPublicUrl(data.path).data.publicUrl;
+}
+async function loadProducts(){
+ try{
+  await loadCategories();
+  products=await run(db.from('products').select('*').order('created_at',{ascending:false}));
+  $('productRows').innerHTML=products.map(x=>`<tr><td>${escapeHTML(x.name)}</td><td>${money(x.price)}</td><td>${x.is_active?'Hiện':'Ẩn'}</td><td><div class="actions"><button onclick="editProduct(${x.id})">Sửa</button><button class="danger" onclick="deleteProduct(${x.id})">Xóa</button></div></td></tr>`).join('');
+ }catch(e){fail(e)}
+}
+$('saveProduct').onclick=async()=>{
+ try{
+  const id=$('productId').value;
+  const old=products.find(x=>String(x.id)===id);
+  const image=await uploadImage($('pImage').files[0]);
+  const row={
+   name:$('pName').value.trim(),
+   price:Number($('pPrice').value),
+   category_id:$('pCategory').value||null,
+   description:$('pDescription').value,
+   detail:$('pDetail').value,
+   image_url:image||(old?.image_url||null),
+   is_active:$('pActive').checked
+  };
+  if(!row.name)throw Error('Nhập tên sản phẩm');
+  if(!Number.isFinite(row.price)||row.price<0)throw Error('Giá không hợp lệ');
+  await run(id?db.from('products').update(row).eq('id',id):db.from('products').insert(row));
+  clearProduct();await loadProducts();await loadDashboard();message('Đã lưu sản phẩm');
+ }catch(e){fail(e)}
+};
+window.editProduct=id=>{
+ const x=products.find(a=>a.id===id);if(!x)return;
+ $('productId').value=x.id;$('pName').value=x.name;$('pPrice').value=x.price;
+ $('pCategory').value=x.category_id||'';
+ $('pDescription').value=x.description||'';$('pDetail').value=x.detail||'';
+ $('pActive').checked=x.is_active;
+ $('productFormTitle').textContent='Sửa sản phẩm';
+};
+window.deleteProduct=async id=>{
+ if(!confirm('Xóa sản phẩm này?'))return;
+ try{await run(db.from('products').delete().eq('id',id));await loadProducts();await loadDashboard();message('Đã xóa sản phẩm')}
+ catch(e){fail(e)}
+};
+function clearProduct(){
+ ['productId','pName','pPrice','pDescription','pDetail','pImage'].forEach(id=>$(id).value='');
+ $('pCategory').value='';$('pActive').checked=true;$('productFormTitle').textContent='Thêm sản phẩm';
+}
+$('cancelProduct').onclick=clearProduct;
+
+async function loadBanners(){
+ try{
+  banners=await run(db.from('banners').select('*').order('created_at',{ascending:false}));
+  $('bannerRows').innerHTML=banners.map(x=>`<tr><td>${escapeHTML(x.title)}</td><td>${x.image_url?`<a href="${escapeHTML(x.image_url)}" target="_blank">Xem ảnh</a>`:'Chưa có'}</td><td>${x.is_active?'Hiện':'Ẩn'}</td><td><div class="actions"><button onclick="editBanner(${x.id})">Sửa</button><button class="danger" onclick="deleteBanner(${x.id})">Xóa</button></div></td></tr>`).join('');
+ }catch(e){fail(e)}
+}
+$('saveBanner').onclick=async()=>{
+ try{
+  const id=$('bannerId').value,old=banners.find(x=>String(x.id)===id);
+  const image=await uploadImage($('bImage').files[0]);
+  const row={title:$('bTitle').value.trim(),image_url:image||old?.image_url||null,is_active:$('bActive').checked};
+  if(!row.title)throw Error('Nhập tiêu đề banner');
+  if(!row.image_url)throw Error('Chọn ảnh banner');
+  await run(id?db.from('banners').update(row).eq('id',id):db.from('banners').insert(row));
+  clearBanner();await loadBanners();message('Đã lưu banner');
+ }catch(e){fail(e)}
+};
+window.editBanner=id=>{
+ const x=banners.find(a=>a.id===id);if(!x)return;
+ $('bannerId').value=x.id;$('bTitle').value=x.title;$('bActive').checked=x.is_active;
+};
+window.deleteBanner=async id=>{
+ if(!confirm('Xóa banner này?'))return;
+ try{await run(db.from('banners').delete().eq('id',id));await loadBanners();message('Đã xóa banner')}
+ catch(e){fail(e)}
+};
+function clearBanner(){$('bannerId').value='';$('bTitle').value='';$('bImage').value='';$('bActive').checked=true}
+$('cancelBanner').onclick=clearBanner;
+
+async function loadOrders(){
+ try{
+  const rows=await run(db.from('orders').select('id,customer_id,total,status,note,created_at').order('created_at',{ascending:false}));
+  const ids=[...new Set(rows.map(x=>x.customer_id).filter(Boolean))];
+  let people=[];
+  if(ids.length)people=await run(db.from('customers').select('id,name,phone').in('id',ids));
+  $('orderRows').innerHTML=rows.map(x=>{
+   const c=people.find(p=>p.id===x.customer_id);
+   return `<tr><td>#${x.id}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button onclick="showOrder(${x.id})">Chi tiết</button><button onclick="changeStatus(${x.id})">Đổi trạng thái</button></div></td></tr>`;
+  }).join('');
+  if(!rows.length)$('orderRows').innerHTML='<tr><td colspan="6">Chưa có đơn hàng</td></tr>';
+ }catch(e){fail(e)}
+}
+window.showOrder=async id=>{
+ try{
+  const order=await run(db.from('orders').select('*').eq('id',id).single());
+  const items=await run(db.from('order_items').select('*').eq('order_id',id));
+  $('orderDetail').innerHTML=`<h3>Đơn hàng #${id}</h3><p>Tổng: ${money(order.total)}</p><p>Trạng thái: ${escapeHTML(order.status||'')}</p><p>Ghi chú: ${escapeHTML(order.note||'')}</p><h4>Sản phẩm</h4>`+
+  (items.map(x=>`<p>${escapeHTML(x.product_name)} × ${x.quantity} — ${money(x.price)}</p>`).join('')||'Không có sản phẩm');
+ }catch(e){fail(e)}
+};
+window.changeStatus=async id=>{
+ const status=prompt('Nhập trạng thái mới cho đơn hàng:');
+ if(status===null||!status.trim())return;
+ try{await run(db.from('orders').update({status:status.trim()}).eq('id',id));await loadOrders();message('Đã cập nhật trạng thái')}
+ catch(e){fail(e)}
+};
+
+async function loadCustomers(){
+ try{
+  const rows=await run(db.from('customers').select('id,name,phone,email,created_at').order('created_at',{ascending:false}));
+  $('customerRows').innerHTML=rows.map(x=>`<tr><td>${x.id}</td><td>${escapeHTML(x.name)}</td><td>${escapeHTML(x.phone)}</td><td>${escapeHTML(x.email)}</td><td>${date(x.created_at)}</td></tr>`).join('');
+  if(!rows.length)$('customerRows').innerHTML='<tr><td colspan="5">Chưa có khách hàng</td></tr>';
+ }catch(e){fail(e)}
+}
+checkSession();
+</script>
 </body>
 </html>
