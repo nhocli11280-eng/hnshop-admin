@@ -424,4 +424,25 @@ async function loadMyOrders() {
 }
 document.getElementById("accountHistory").addEventListener("click",loadMyOrders);
 
+async function loadShopBrand() {
+  try {
+    const { data, error } = await db.from("payment_settings")
+      .select("shop_name,logo_image_url").eq("id", 1).maybeSingle();
+    if (error) throw error;
+    const name = String(data?.shop_name || "HNShop").trim() || "HNShop";
+    document.getElementById("brandName").textContent = name;
+    document.title = name + " — Digital Game Store";
+    const logo = document.getElementById("brandLogo");
+    const mark = document.getElementById("brandMark");
+    if (data?.logo_image_url) {
+      logo.src = data.logo_image_url;
+      logo.style.display = "block";
+      mark.style.display = "none";
+    }
+  } catch (error) {
+    console.warn("Không tải được tên/logo shop:", error);
+  }
+}
+
 loadProducts();
+loadShopBrand();
