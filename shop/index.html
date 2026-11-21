@@ -1,2 +1,75 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050d1b">
+  <meta name="description" content="HNShop - Digital Game Store. Sản phẩm số uy tín và nhanh chóng.">
+  <title>HNShop — Digital Game Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="HNShop trang chủ">
+      <span class="brand-mark"><span>HN</span></span>
+      <span class="brand-copy"><strong>HNShop</strong><small>DIGITAL GAME STORE</small></span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Mở menu" aria-expanded="false"><i></i><i></i><i></i></button>
+    <nav class="nav-menu" id="navMenu">
+      <a href="#home">Trang chủ</a><a href="#products">Sản phẩm</a><a href="#contact">Liên hệ</a>
+    </nav>
+  </header>
+
+  <main id="home" class="page-shell">
+    <div class="announcement"><span class="pulse-dot"></span> ĐÃ UPDATE MAP CHẤP TỐ HN AOV V2 !! <span class="pulse-dot"></span></div>
+
+    <section class="hero" aria-label="HNShop - sản phẩm số">
+      <img src="assets/banner-reference.jpg" alt="Banner HNShop gaming" class="hero-art">
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <p class="hero-kicker">WELCOME TO</p>
+        <h1>HNSHOP</h1>
+        <p class="hero-subtitle">SẢN PHẨM SỐ — UY TÍN &amp; NHANH CHÓNG</p>
+        <a class="hero-cta" href="#products"><span>»</span> MUA NGAY HÔM NAY! <span>«</span></a>
+      </div>
+      <div class="hero-scan"></div>
+    </section>
+
+    <section class="products-panel" id="products">
+      <div class="section-heading">
+        <div><span class="eyebrow">KHO SẢN PHẨM</span><h2>Sản phẩm mua trực tiếp</h2></div>
+        <span class="product-count" id="productCount">ĐANG TẢI...</span>
+      </div>
+      <div class="toolbar">
+        <label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg><input id="searchInput" type="search" placeholder="Tìm sản phẩm..." aria-label="Tìm sản phẩm"></label>
+        <div class="filters" role="group" aria-label="Lọc danh mục">
+          <button class="filter-btn active" data-filter="all">Tất cả</button>
+        </div>
+      </div>
+      <div class="product-grid" id="productGrid" aria-live="polite"></div>
+      <div class="empty-state" id="emptyState" hidden><span>⌕</span><strong>Không tìm thấy sản phẩm</strong><p>Thử từ khóa khác hoặc chọn danh mục Tất cả.</p></div>
+    </section>
+  </main>
+
+  <footer id="contact" class="site-footer">
+    <div class="footer-brand"><strong>HN<span>SHOP</span></strong><small>DIGITAL GAME STORE</small></div>
+    <p>Sản phẩm số — Uy tín &amp; nhanh chóng.</p>
+    <div class="footer-links"><a href="#home">Trang chủ</a><a href="#products">Sản phẩm</a><a href="https://facebook.com/" target="_blank" rel="noreferrer">Facebook</a></div>
+    <small class="copyright">© <span id="year"></span> HNShop. All rights reserved.</small>
+  </footer>
+
+  <div class="modal-backdrop" id="productModal" aria-hidden="true">
+    <section class="product-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="Đóng">×</button>
+      <img id="modalImage" src="" alt="">
+      <div class="modal-body"><span class="modal-tag">HNShop • DIGITAL ITEM</span><h2 id="modalTitle"></h2><p id="modalDescription"></p><div class="modal-meta"><span>Giao hàng</span><b>Hỗ trợ nhanh chóng</b></div><a class="buy-button" id="buyButton" href="#" target="_blank" rel="noreferrer">Liên hệ mua hàng <span>↗</span></a><small class="modal-note">Vui lòng kiểm tra thông tin sản phẩm trước khi đặt mua.</small></div>
+    </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
