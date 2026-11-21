@@ -145,3 +145,76 @@ body::before{
 }
 .empty-state,.product-grid{background:transparent!important}
 @media(prefers-reduced-motion:reduce){body::before{animation:none!important}}
+
+
+/* HNSHOP gaming polish: animated neon canvas and readable product typography */
+:root{
+  --hn-neon:#45caff;
+  --hn-cyan:#75efff;
+  --hn-text:#eaf6ff;
+  --hn-muted:#a9c2d8;
+}
+html,body{color:var(--hn-text)}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.34;
+  background-image:
+    linear-gradient(rgba(50,160,255,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(50,160,255,.055) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:linear-gradient(to bottom,transparent,#000 18%,#000 82%,transparent);
+  animation:hnGridDrift 28s linear infinite;
+}
+@keyframes hnGridDrift{to{background-position:44px 44px}}
+/* Product cards */
+.product-card,.product-item,.product{
+  color:var(--hn-text);
+  border-color:rgba(65,180,255,.24)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px rgba(120,220,255,.06);
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+.product-card:hover,.product-item:hover,.product:hover{
+  transform:translateY(-4px);
+  border-color:rgba(69,202,255,.72)!important;
+  box-shadow:0 12px 34px rgba(0,130,255,.18),0 0 18px rgba(0,190,255,.10);
+}
+.product-card h2,.product-card h3,.product-item h2,.product-item h3,
+.product h2,.product h3,.product-name,.product-title{
+  color:#f1f8ff!important;
+  font-weight:800;
+  letter-spacing:.2px;
+  text-shadow:0 0 12px rgba(48,177,255,.18);
+}
+.product-card p,.product-item p,.product p,.product-description{
+  color:#b9cce0!important;
+}
+.product-card .price,.product-item .price,.product .price,
+.product-price,[class*="price"]{
+  color:#65e6ff;
+  font-weight:900;
+  text-shadow:0 0 12px rgba(35,194,255,.22);
+}
+.product-card button,.product-item button,.product button,
+.product-card .btn,.product-item .btn{
+  color:#eafaff;
+  border-color:rgba(69,202,255,.55);
+  background:linear-gradient(135deg,#07518b,#087eae);
+  box-shadow:0 0 14px rgba(0,160,255,.14);
+}
+.product-card button:hover,.product-item button:hover,.product button:hover{
+  filter:brightness(1.18);
+}
+.category,.category-name,.product-category,.product-meta{
+  color:#91b8d5!important;
+}
+button,.hero-cta{
+  text-shadow:0 0 8px rgba(100,220,255,.2);
+}
+@media(prefers-reduced-motion:reduce){
+  body::after{animation:none}
+  .product-card,.product-item,.product{transition:none}
+}
