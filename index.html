@@ -146,7 +146,8 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 <div class="panel">
 <input type="hidden" id="bannerId">
 <label>Tiêu đề</label><input id="bTitle">
-<label>Ảnh banner</label><input id="bImage" type="file" accept="image/*">
+<label>Ảnh banner</label><input id="bImage" type="file" accept="image/png,image/jpeg,image/webp">
+<div style="margin:8px 0 14px"><img id="bImagePreview" alt="Xem trước banner" style="display:none;max-width:100%;max-height:180px;object-fit:contain;border:1px solid #d8deea;border-radius:8px;padding:5px"><p id="bImageHint" style="font-size:13px;color:#64748b">Chọn ảnh PNG, JPG hoặc WEBP, tối đa 5 MB. Khi sửa, để trống nếu muốn giữ ảnh cũ.</p></div>
 <label><input id="bActive" type="checkbox" checked style="width:auto"> Đang hiển thị</label>
 <button id="saveBanner">Lưu banner</button>
 <button class="secondary" id="cancelBanner">Hủy</button>
@@ -659,20 +660,45 @@ function clearProduct() {
 $('cancelProduct').onclick = clearProduct;
 
 /* BANNER */
+function showBannerPreview(url) {
+ const img = $('bImagePreview');
+ if(url) {
+  img.src = url;
+  img.style.display = 'block';
+ } else {
+  img.removeAttribute('src');
+  img.style.display = 'none';
+ }
+}
+$('bImage').addEventListener('change', () => {
+ const file = $('bImage').files[0];
+ if(!file) return;
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type)) {
+  $('bImage').value = '';
+  message('Ảnh banner chỉ hỗ trợ PNG, JPG hoặc WEBP.', true);
+  return;
+ }
+ if(file.size > 5 * 1024 * 1024) {
+  $('bImage').value = '';
+  message('Ảnh banner tối đa 5 MB.', true);
+  return;
+ }
+ showBannerPreview(URL.createObjectURL(file));
+ $('bImageHint').textContent = 'Ảnh mới đã chọn. Nhấn Lưu banner để áp dụng.';
+});
 async function loadBanners() {
+ $('bannerRows').innerHTML = '<tr><td colspan="4">Đang tải banner...</td></tr>';
  banners = await run(
-  db.from('banners')
-   .select('*')
+  db.from('banners').select('id,title,image_url,is_active,created_at')
    .order('created_at', {ascending:false})
  );
-
  $('bannerRows').innerHTML = banners.length
   ? banners.map(x => `
    <tr>
-    <td>${escapeHTML(x.title)}</td>
+    <td>${escapeHTML(x.title || '')}</td>
     <td>${x.image_url
-     ? `<a href="${escapeHTML(x.image_url)}" target="_blank" rel="noopener">Xem ảnh</a>`
-     : 'Chưa có'}</td>
+     ? `<a href="${escapeHTML(x.image_url)}" target="_blank" rel="noopener"><img src="${escapeHTML(x.image_url)}" alt="Banner" style="width:110px;height:58px;object-fit:cover;border-radius:6px"></a>`
+     : 'Chưa có ảnh'}</td>
     <td>${x.is_active ? 'Hiện' : 'Ẩn'}</td>
     <td><div class="actions">
      <button onclick="editBanner('${escapeHTML(x.id)}')">Sửa</button>
@@ -682,73 +708,76 @@ async function loadBanners() {
   `).join('')
   : '<tr><td colspan="4">Chưa có banner</td></tr>';
 }
-
 $('saveBanner').onclick = async () => {
  const btn = $('saveBanner');
-
  try {
   btn.disabled = true;
-
-  const id = $('bannerId').value;
+  btn.textContent = 'Đang lưu banner...';
+  const id = $('bannerId').value.trim();
   const old = banners.find(x => String(x.id) === String(id));
-  const image = await uploadImage($('bImage').files[0]);
-
-  const row = {
-   title: $('bTitle').value.trim(),
-   image_url: image || old?.image_url || null,
-   is_active: $('bActive').checked
-  };
-
-  if(!row.title) throw Error('Nhập tiêu đề banner');
-  if(!row.image_url) throw Error('Chọn ảnh banner');
-
+  const file = $('bImage').files[0];
+  const title = $('bTitle').value.trim();
+  if(!title) throw Error('Vui lòng nhập tiêu đề banner.');
+  let imageUrl = old?.image_url || null;
+  if(file) imageUrl = await uploadImage(file);
+  if(!imageUrl) throw Error('Vui lòng chọn ảnh banner.');
+  const row = {title, image_url:imageUrl, is_active:$('bActive').checked};
   if(id) {
-   await run(db.from('banners').update(row).eq('id', id).select().single());
+   const {data,error} = await db.from('banners').update(row).eq('id',id).select('id').maybeSingle();
+   if(error) throw error;
+   if(!data) throw Error('Không tìm thấy banner để cập nhật hoặc tài khoản không có quyền sửa.');
   } else {
-   await run(db.from('banners').insert(row).select().single());
+   const {data,error} = await db.from('banners').insert(row).select('id').single();
+   if(error) throw error;
+   if(!data) throw Error('Không nhận được xác nhận lưu banner.');
   }
-
   clearBanner();
   await loadBanners();
-  message('Đã lưu banner');
-
+  message(id ? 'Đã cập nhật banner thành công.' : 'Đã thêm banner thành công.');
  } catch(e) {
   fail(e);
  } finally {
   btn.disabled = false;
+  btn.textContent = 'Lưu banner';
  }
 };
-
 window.editBanner = id => {
  const x = banners.find(a => String(a.id) === String(id));
- if(!x) return;
-
+ if(!x) {
+  message('Không tìm thấy banner cần sửa. Hãy tải lại danh sách.', true);
+  return;
+ }
  $('bannerId').value = x.id;
  $('bTitle').value = x.title || '';
  $('bActive').checked = x.is_active !== false;
  $('bImage').value = '';
- window.scrollTo({top:0, behavior:'smooth'});
+ showBannerPreview(x.image_url || '');
+ $('bImageHint').textContent = x.image_url
+  ? 'Đang dùng ảnh hiện tại. Chọn ảnh mới nếu muốn thay ảnh.'
+  : 'Banner chưa có ảnh. Hãy chọn ảnh trước khi lưu.';
+ $('saveBanner').textContent = 'Cập nhật banner';
+ window.scrollTo({top:0,behavior:'smooth'});
 };
-
 window.deleteBanner = async id => {
- if(!confirm('Xóa banner này?')) return;
-
+ if(!confirm('Bạn chắc chắn muốn xóa banner này?')) return;
  try {
-  await run(db.from('banners').delete().eq('id', id));
+  await run(db.from('banners').delete().eq('id',id).select('id').single());
+  if(String($('bannerId').value) === String(id)) clearBanner();
   await loadBanners();
-  message('Đã xóa banner');
+  message('Đã xóa banner thành công.');
  } catch(e) {
   fail(e);
  }
 };
-
 function clearBanner() {
  $('bannerId').value = '';
  $('bTitle').value = '';
  $('bImage').value = '';
  $('bActive').checked = true;
+ showBannerPreview('');
+ $('bImageHint').textContent = 'Chọn ảnh PNG, JPG hoặc WEBP, tối đa 5 MB. Khi sửa, để trống nếu muốn giữ ảnh cũ.';
+ $('saveBanner').textContent = 'Lưu banner';
 }
-
 $('cancelBanner').onclick = clearBanner;
 
 /* ĐƠN HÀNG */
