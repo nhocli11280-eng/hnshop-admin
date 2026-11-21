@@ -747,12 +747,12 @@ window.deletePackage=async id=>{
  if(!confirm('Xóa gói "'+pkg.name+'" khỏi danh sách bán? Nếu gói đã có key trong kho, hệ thống sẽ ẩn gói thay vì xóa để giữ liên kết và lịch sử cấp key.'))return;
  try{
   // Không xóa bản ghi gói nếu product_keys còn tham chiếu package_id.
-  const refs=await run(db.from('product_keys').select('id',{count:'exact',head:true}).eq('package_id',id));
-  if((refs?.length||0)>0 || refs?.count>0){
+  const refs=await run(db.from('product_keys').select('id').eq('package_id',id));
+  if(refs.length>0){
    await run(db.from('product_packages').update({is_active:false}).eq('id',id).select('id').single());
    if(String($('packageId').value)===String(id))clearPackageForm();
    await loadProductPackages();
-   message('Gói có '+refs.count+' key liên kết nên đã được ẩn khỏi Shop, không xóa dữ liệu kho key.');
+   message('Gói có '+refs.length+' key liên kết nên đã được ẩn khỏi Shop, không xóa dữ liệu kho key.');
    return;
   }
   await run(db.from('product_packages').delete().eq('id',id).select('id').single());
