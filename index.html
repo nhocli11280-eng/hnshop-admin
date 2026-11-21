@@ -742,8 +742,36 @@ window.editPackage=id=>{
  $('packageActive').checked=x.is_active!==false;
 };
 window.deletePackage=async id=>{
- if(!confirm('Xóa gói key này? Gói đã được dùng trong đơn hàng có thể không xóa được.'))return;
- try{await run(db.from('product_packages').delete().eq('id',id));clearPackageForm();await loadProductPackages();message('Đã xóa gói key.');}catch(e){fail(e);}
+ const pkg=(window.currentProductPackages||[]).find(p=>String(p.id)===String(id));
+ if(!pkg){message('Không tìm thấy gói key. Hãy tải lại danh sách.',true);return;}
+ if(!confirm('Xóa gói "'+pkg.name+'" khỏi danh sách bán? Nếu gói đã có key trong kho, hệ thống sẽ ẩn gói thay vì xóa để giữ liên kết và lịch sử cấp key.'))return;
+ try{
+  // Không xóa bản ghi gói nếu product_keys còn tham chiếu package_id.
+  const refs=await run(db.from('product_keys').select('id',{count:'exact',head:true}).eq('package_id',id));
+  if((refs?.length||0)>0 || refs?.count>0){
+   await run(db.from('product_packages').update({is_active:false}).eq('id',id).select('id').single());
+   if(String($('packageId').value)===String(id))clearPackageForm();
+   await loadProductPackages();
+   message('Gói có '+refs.count+' key liên kết nên đã được ẩn khỏi Shop, không xóa dữ liệu kho key.');
+   return;
+  }
+  await run(db.from('product_packages').delete().eq('id',id).select('id').single());
+  if(String($('packageId').value)===String(id))clearPackageForm();
+  await loadProductPackages();
+  message('Đã xóa gói key vì chưa có key nào liên kết.');
+ }catch(e){
+  // Phòng trường hợp có dữ liệu liên kết phát sinh giữa lúc kiểm tra và xóa.
+  if(e?.code==='23503'){
+   try{
+    await run(db.from('product_packages').update({is_active:false}).eq('id',id).select('id').single());
+    if(String($('packageId').value)===String(id))clearPackageForm();
+    await loadProductPackages();
+    message('Gói đang được key trong kho tham chiếu nên đã chuyển sang ẩn để bảo toàn dữ liệu.');
+    return;
+   }catch(fallbackError){fail(fallbackError);return;}
+  }
+  fail(e);
+ }
 };
 function clearPackageForm(){['packageId','packageName','packagePrice'].forEach(id=>$(id).value='');$('packageActive').checked=true;}
 $('packageProduct').addEventListener('change',()=>{clearPackageForm();loadProductPackages().catch(fail);});
