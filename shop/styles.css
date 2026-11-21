@@ -102,3 +102,46 @@ body{
 @media(prefers-reduced-motion:reduce){
   body,.ambient,.hero,.hero h1,.hero-cta{animation:none!important}
 }
+
+
+/* Seamless dark gaming canvas: prevent any white gaps between sections */
+html,body{
+  min-height:100%!important;
+  background:#020712!important;
+}
+body{
+  position:relative!important;
+  isolation:isolate!important;
+  background:transparent!important;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 8% 14%,rgba(0,132,255,.20),transparent 34%),
+    radial-gradient(ellipse at 92% 38%,rgba(0,214,255,.13),transparent 33%),
+    radial-gradient(ellipse at 48% 92%,rgba(21,67,190,.19),transparent 43%),
+    linear-gradient(145deg,#02050c 0%,#06152a 48%,#020712 100%);
+  background-size:160% 160%,160% 160%,160% 160%,100% 100%;
+  animation:hnFullCanvas 24s ease-in-out infinite alternate;
+}
+@keyframes hnFullCanvas{
+  0%{background-position:0 0,100% 15%,45% 100%,0 0}
+  50%{background-position:55% 45%,30% 75%,85% 25%,0 0}
+  100%{background-position:100% 100%,0 20%,10% 75%,0 0}
+}
+/* Keep every page region transparent or dark so the canvas remains continuous */
+.page-shell,main,.site-footer,section:not(.product-modal),.products-panel{
+  background-color:transparent;
+}
+.site-footer{
+  background:linear-gradient(180deg,rgba(3,13,27,.72),rgba(1,5,13,.98))!important;
+}
+.products-panel{
+  background:linear-gradient(145deg,rgba(3,18,36,.94),rgba(2,9,22,.96))!important;
+}
+.empty-state,.product-grid{background:transparent!important}
+@media(prefers-reduced-motion:reduce){body::before{animation:none!important}}
