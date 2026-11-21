@@ -1076,27 +1076,34 @@ window.changeStatus = async id => {
 
 /* KHO KEY */
 async function loadKeyProducts() {
-  const rows = await run(db.from('products').select('id,name').order('name'));
-  $('keyProduct').innerHTML =
-    '<option value="">-- Chọn sản phẩm --</option>' +
-    rows.map(p => '<option value="' + escapeHTML(p.id) + '">' +
-      escapeHTML(p.name) + '</option>').join('');
+  const select=$('keyProduct');
+  const previous=select.value;
+  const rows=await run(db.from('products').select('id,name').order('name'));
+  select.innerHTML='<option value="">-- Chọn sản phẩm --</option>'+
+    rows.map(p=>'<option value="'+escapeHTML(p.id)+'">'+escapeHTML(p.name)+'</option>').join('');
+  if(previous && rows.some(p=>String(p.id)===previous)) select.value=previous;
   await loadKeyPackages();
 }
 
 async function loadKeyPackages() {
   const productId=$('keyProduct').value;
   const select=$('keyPackage');
+  const previous=select.value;
   if(!productId) {
     select.innerHTML='<option value="">Chọn sản phẩm trước</option>';
     await loadKeyStats();
     return;
   }
-  const rows=await run(db.from('product_packages').select('id,name,price')
-    .eq('product_id',Number(productId)).order('sort_order').order('created_at'));
+  const rows=await run(db.from('product_packages').select('id,name,price,is_active')
+    .eq('product_id',productId).order('sort_order').order('created_at'));
   select.innerHTML=rows.map(p=>'<option value="'+escapeHTML(p.id)+'">'+
-    escapeHTML(p.name)+' — '+money(p.price)+'</option>').join('');
+    escapeHTML(p.name)+' — '+money(p.price)+(p.is_active ? '' : ' [ĐÃ ẨN - Shop không hiển thị]')+'</option>').join('');
   if(!rows.length) select.innerHTML='<option value="">Sản phẩm chưa có gói key</option>';
+  if(previous && rows.some(p=>String(p.id)===previous)) select.value=previous;
+  const selected=rows.find(p=>String(p.id)===select.value);
+  $('keyMessage').textContent=selected && selected.is_active===false
+    ? 'Gói đang ẩn. Shop chỉ hiển thị gói có trạng thái Đang bán. Vào Sản phẩm → Quản lý gói key và bật “Đang bán”.'
+    : '';
   await loadKeyStats();
 }
 
@@ -1150,11 +1157,30 @@ $('saveKeys').onclick=async()=>{
     if(!keys.length)throw Error('Bạn chưa nhập key.');
     if(keys.length>500)throw Error('Mỗi lần chỉ nhập tối đa 500 key.');
     btn.disabled=true;btn.textContent='Đang lưu...';
-    const rows=keys.map(key=>({product_id:productId,package_id:packageId,key_value:key,status:'available'}));
-    const {error}=await db.from('product_keys').upsert(rows,{onConflict:'product_id,key_value',ignoreDuplicates:true});
-    if(error)throw error;
+    // Tìm key đã tồn tại để tránh upsert ignoreDuplicates làm key cũ bị bỏ qua
+    // khi người quản trị nhập lại vào gói khác (ví dụ Key 7 ngày).
+    const existing=await run(db.from('product_keys')
+      .select('id,key_value,status,package_id')
+      .eq('product_id',productId).in('key_value',keys));
+    const existingNames=new Set(existing.map(x=>x.key_value));
+    const newRows=keys.filter(key=>!existingNames.has(key))
+      .map(key=>({product_id:productId,package_id:packageId,key_value:key,status:'available'}));
+    if(newRows.length) {
+      const {error}=await db.from('product_keys').insert(newRows);
+      if(error)throw error;
+    }
+    const movable=existing.filter(x=>x.status==='available' && String(x.package_id)!==String(packageId));
+    if(movable.length) {
+      const {error}=await db.from('product_keys').update({package_id:packageId})
+        .eq('product_id',productId).eq('status','available')
+        .in('id',movable.map(x=>x.id));
+      if(error)throw error;
+    }
+    const deliveredDuplicates=existing.filter(x=>x.status==='delivered').length;
     $('keyInput').value='';
-    $('keyMessage').textContent='Đã xử lý '+keys.length+' key cho gói đã chọn. Key trùng được bỏ qua.';
+    $('keyMessage').textContent='Đã thêm '+newRows.length+' key mới; chuyển '+movable.length+
+      ' key còn trống sang gói đã chọn.'+
+      (deliveredDuplicates ? ' Bỏ qua '+deliveredDuplicates+' key đã cấp để không làm sai lịch sử đơn hàng.' : '');
     await loadKeyStats();
   }catch(e){
     $('keyMessage').textContent='Không lưu được key: '+(e.message||e)+'. Kiểm tra quyền Admin và gói key.';
