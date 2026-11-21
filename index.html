@@ -873,7 +873,7 @@ $('saveKeys').onclick = async () => {
   const btn = $('saveKeys');
   try {
     const productId = Number($('keyProduct').value);
-    const keys = [...new Set($('keyInput').value.split(/\\r?\\n/)
+    const keys = [...new Set($('keyInput').value.split(/\r?\n/)
       .map(x => x.trim()).filter(Boolean))];
 
     if (!productId) throw Error('Bạn chưa chọn sản phẩm.');
