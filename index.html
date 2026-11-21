@@ -1177,7 +1177,7 @@ window.showStoreOrder = async id => {
   const order = await run(db.from('store_orders').select('id,total,status,transfer_note,created_at,paid_at')
    .eq('id',id).single());
   const items = await run(db.from('store_order_items')
-   .select('product_name,quantity,price').eq('order_id',id));
+   .select('product_name,package_name,quantity,price').eq('order_id',id));
   $('storeOrderDetail').innerHTML =
    '<h3>Chi tiết đơn hàng</h3>' +
    '<p><b>Mã đơn:</b> ' + escapeHTML(order.id) + '</p>' +
@@ -1186,7 +1186,7 @@ window.showStoreOrder = async id => {
    '<p><b>Trạng thái:</b> ' + escapeHTML(order.status) + '</p>' +
    '<p><b>Ngày tạo:</b> ' + date(order.created_at) + '</p>' +
    '<h4>Sản phẩm</h4>' +
-   (items.map(x => '<p>' + escapeHTML(x.product_name) + ' × ' +
+   (items.map(x => '<p>' + escapeHTML(x.product_name) + ' — ' + escapeHTML(x.package_name || 'Gói key') + ' × ' +
     escapeHTML(x.quantity) + ' — ' + storeMoney(x.price) + '</p>').join('') || 'Không có sản phẩm');
  } catch(e) {
   $('storeOrderDetail').textContent = 'Lỗi: ' + (e.message || e);
