@@ -44,6 +44,114 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
  main{padding:12px}
  header{padding:13px}
 }
+
+/* HNSHOP GAMING ADMIN — animated neon interface */
+:root{
+ --g-bg:#030916;--g-panel:rgba(7,20,40,.88);--g-line:rgba(0,190,255,.22);
+ --g-blue:#16baff;--g-cyan:#43e7ff;--g-text:#e7f6ff;--g-muted:#8caec7;
+}
+html{min-height:100%;background:var(--g-bg)}
+body{
+ color:var(--g-text);
+ background:
+  radial-gradient(ellipse at 12% 8%,rgba(0,145,255,.17),transparent 34%),
+  radial-gradient(ellipse at 88% 48%,rgba(0,225,255,.10),transparent 32%),
+  linear-gradient(145deg,#020611,#07172d 55%,#020814);
+ background-attachment:fixed;
+}
+body::before{
+ content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.22;
+ background:repeating-linear-gradient(115deg,transparent 0 95px,rgba(26,190,255,.10) 96px,transparent 98px 190px);
+ animation:adminGridFlow 22s linear infinite;
+}
+#login,#app{position:relative;z-index:1}
+#login,.panel,.stat{
+ color:var(--g-text);
+ background:linear-gradient(145deg,rgba(8,27,52,.96),rgba(3,13,29,.96));
+ border:1px solid var(--g-line);
+ box-shadow:0 0 0 1px rgba(0,156,255,.05),0 10px 32px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.035);
+}
+#login{position:relative;overflow:hidden;box-shadow:0 0 35px rgba(0,170,255,.14),0 18px 48px #0008}
+#login::before,.panel::before,.stat::before{
+ content:"";position:absolute;top:0;left:-130%;width:65%;height:2px;
+ background:linear-gradient(90deg,transparent,var(--g-cyan),transparent);
+ animation:adminNeonSweep 6s ease-in-out infinite;pointer-events:none;
+}
+#login::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 28px rgba(0,170,255,.06)}
+header{
+ position:relative;overflow:hidden;
+ background:linear-gradient(100deg,#041326,#092b50 55%,#041326);
+ border-bottom:1px solid rgba(40,205,255,.45);
+ box-shadow:0 5px 28px rgba(0,150,255,.16);
+}
+header::after{
+ content:"";position:absolute;top:0;bottom:0;width:35%;left:-45%;
+ background:linear-gradient(90deg,transparent,rgba(51,222,255,.12),transparent);
+ transform:skewX(-22deg);animation:adminHeaderBeam 8s linear infinite;pointer-events:none;
+}
+header strong{letter-spacing:2px;text-shadow:0 0 12px rgba(22,186,255,.75)}
+.layout{position:relative;background:transparent}
+nav{
+ background:rgba(3,13,29,.92);border-right:1px solid var(--g-line);
+ box-shadow:8px 0 28px rgba(0,0,0,.14);
+}
+nav button{
+ position:relative;overflow:hidden;color:#b9d6e9;background:rgba(9,27,49,.62);
+ border:1px solid rgba(0,166,230,.12);transition:background .2s,border-color .2s,box-shadow .2s,color .2s;
+}
+nav button::after{
+ content:"";position:absolute;top:0;bottom:0;left:-80%;width:45%;
+ background:linear-gradient(90deg,transparent,rgba(65,220,255,.2),transparent);
+ transform:skewX(-20deg);transition:left .45s;
+}
+nav button:hover::after,nav button.active::after{left:140%}
+nav button.active,nav button:hover{
+ color:#e9fbff;background:linear-gradient(100deg,rgba(0,128,255,.25),rgba(0,210,255,.10));
+ border-color:rgba(39,205,255,.62);box-shadow:0 0 15px rgba(0,170,255,.14),inset 3px 0 var(--g-cyan);
+}
+main{background:transparent}
+.page>h2{color:#e7faff;text-shadow:0 0 16px rgba(0,180,255,.38);letter-spacing:.3px}
+.panel,.stat{position:relative;overflow:hidden;border-radius:13px}
+.stat{background:linear-gradient(145deg,rgba(8,31,59,.95),rgba(4,15,33,.96))}
+.stat strong{color:var(--g-cyan);text-shadow:0 0 13px rgba(0,190,255,.42)}
+button{
+ position:relative;overflow:hidden;
+ background:linear-gradient(110deg,#0757a0,#087fb5 55%,#07558f);
+ color:#f3fcff;border:1px solid rgba(66,214,255,.42);
+ box-shadow:0 0 12px rgba(0,145,255,.12);
+ transition:filter .2s,box-shadow .2s,transform .2s;
+}
+button:hover:not(:disabled){filter:brightness(1.18);box-shadow:0 0 18px rgba(0,190,255,.30);transform:translateY(-1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+ outline:2px solid var(--g-cyan);outline-offset:2px;box-shadow:0 0 0 4px rgba(0,190,255,.12);
+}
+button.secondary{background:#142b46;color:#cdeeff;border:1px solid rgba(88,171,220,.35)}
+button.danger{background:linear-gradient(110deg,#812a43,#b53650);border-color:#e66a86}
+input,select,textarea{
+ color:#e8f7ff;background:#06172b;border:1px solid rgba(86,166,210,.30);
+}
+input::placeholder,textarea::placeholder{color:#7896ad}
+label{color:#c2e2f5}
+table{color:#d8efff}
+th{color:#75dfff;background:rgba(0,115,180,.13)}
+th,td{border-bottom:1px solid rgba(90,167,208,.16)}
+tr:hover td{background:rgba(0,145,220,.055)}
+#message{border:1px solid rgba(68,202,255,.2)}
+#loginMsg{color:#9bdfff}
+@keyframes adminNeonSweep{0%,20%{left:-130%;opacity:0}35%{opacity:1}65%{left:150%;opacity:.8}100%{left:150%;opacity:0}}
+@keyframes adminHeaderBeam{0%{left:-45%}65%,100%{left:130%}}
+@keyframes adminGridFlow{from{background-position:0 0}to{background-position:190px 0}}
+@media(max-width:650px){
+ body{background-attachment:scroll}
+ body::before{opacity:.10;animation:none}
+ nav{border-right:0;border-bottom:1px solid var(--g-line);background:rgba(3,13,29,.97)}
+ nav button{margin-bottom:0}
+ .panel,.stat{box-shadow:0 5px 20px rgba(0,0,0,.22)}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
 </style>
 </head>
 <body>
