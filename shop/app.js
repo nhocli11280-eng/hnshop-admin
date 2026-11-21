@@ -252,6 +252,32 @@ async function syncCustomerSession() {
   currentUser = data.session?.user || null;
   refreshAccountUI();
 }
+
+async function enforceShopAccess() {
+  if (!currentUser) return true;
+  const {data,error}=await db.rpc("check_shop_customer_access");
+  if(error) { console.warn("Không kiểm tra được quyền shop:",error.message); return false; }
+  if(data === false) {
+    await db.auth.signOut();
+    currentUser=null;
+    pendingPurchase=null;
+    refreshAccountUI();
+    purchaseMessage('<p class="purchase-warning">Tài khoản đã bị Admin khóa quyền truy cập HNShop. Vui lòng liên hệ quản trị viên.</p>');
+    accountMessage.textContent="Tài khoản đã bị khóa khỏi shop.";
+    showAccount();
+    return false;
+  }
+  return true;
+}
+async function registerShopCustomer() {
+  if(!currentUser) return;
+  const {data,error}=await db.rpc("register_shop_customer",{
+    p_username:currentUser.user_metadata?.username || currentUser.email || "Khách hàng"
+  });
+  if(error) { console.warn("Không ghi nhận được tài khoản:",error.message); return; }
+  if(data === false) await enforceShopAccess();
+}
+
 document.getElementById("accountOpen").addEventListener("click",showAccount);
 document.getElementById("accountClose").addEventListener("click",hideAccount);
 accountModal.addEventListener("click",e=>{if(e.target===accountModal)hideAccount();});
@@ -314,8 +340,10 @@ document.getElementById("buyButton").addEventListener("click", async e => {
 db.auth.onAuthStateChange((_event,session)=>{
   currentUser=session?.user||null;
   refreshAccountUI();
+  if(session?.user) setTimeout(()=>registerShopCustomer(),0);
 });
-syncCustomerSession().catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
+syncCustomerSession().then(()=>{if(currentUser) registerShopCustomer();}).catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
+setInterval(()=>{if(currentUser) enforceShopAccess();},10000);
 
 
 /* CHECKOUT VÀ LỊCH SỬ KEY */
@@ -329,6 +357,7 @@ function purchaseMessage(html) { document.getElementById("purchasePanel").innerH
 async function createCustomerOrder(product) {
   try {
     if (!currentUser) throw new Error("Vui lòng đăng nhập trước khi đặt hàng.");
+    if (!(await enforceShopAccess())) throw new Error("Tài khoản đã bị khóa khỏi shop.");
     if (!product || Number(product.price) <= 0) throw new Error("Sản phẩm chưa có giá hợp lệ.");
     accountMessage.textContent = "Đang tạo đơn hàng..."; purchaseMessage("");
     const hash = await randomAccessHash();
