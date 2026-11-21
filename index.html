@@ -284,7 +284,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <h2>Quản lý khách hàng</h2>
 <div class="panel table-wrap">
 <table>
-<thead><tr><th>ID</th><th>Họ tên</th><th>Điện thoại</th><th>Email</th><th>Ngày tạo</th></tr></thead>
+<thead><tr><th>Tên tài khoản</th><th>Email đăng nhập</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Quyền truy cập</th></tr></thead>
 <tbody id="customerRows"></tbody>
 </table>
 </div>
@@ -1186,27 +1186,28 @@ $('savePaymentQr').onclick = async () => {
  } finally { btn.disabled = false; btn.textContent = 'Lưu và áp dụng QR'; }
 };
 
-/* KHÁCH HÀNG */
+/* KHÁCH HÀNG SHOP */
 async function loadCustomers() {
- const rows = await run(
-  db.from('customers')
-   .select('id,name,phone,email,created_at')
-   .order('created_at', {ascending:false})
- );
-
- $('customerRows').innerHTML = rows.length
-  ? rows.map(x => `
+ const body = $('customerRows');
+ body.innerHTML = '<tr><td colspan="5">Đang tải danh sách tài khoản...</td></tr>';
+ try {
+  const {data,error}=await db.rpc('admin_list_shop_customers');
+  if(error) throw error;
+  const rows=Array.isArray(data)?data:[];
+  body.innerHTML=rows.length?rows.map(x=>`
    <tr>
-    <td>${escapeHTML(x.id)}</td>
-    <td>${escapeHTML(x.name)}</td>
-    <td>${escapeHTML(x.phone)}</td>
-    <td>${escapeHTML(x.email)}</td>
+    <td>${escapeHTML(x.username || 'Khách hàng')}</td>
+    <td>${escapeHTML(x.email || '')}</td>
     <td>${date(x.created_at)}</td>
+    <td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
+    <td>${x.is_blocked?'Không được mua key':'Được phép mua key'}</td>
    </tr>
-  `).join('')
-  : '<tr><td colspan="5">Chưa có khách hàng</td></tr>';
+  `).join(''):'<tr><td colspan="5">Chưa có tài khoản shop. Khách cần đăng ký hoặc đăng nhập shop ít nhất một lần.</td></tr>';
+ } catch(e) {
+  body.innerHTML='<tr><td colspan="5">Không tải được khách hàng: '+escapeHTML(e.message||e)+'</td></tr>';
+  throw e;
+ }
 }
-
 
 /* QUẢN LÝ KHÓA TÀI KHOẢN SHOP */
 async function loadCustomerAccess() {
