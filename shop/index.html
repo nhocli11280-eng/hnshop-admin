@@ -20,7 +20,7 @@
     </a>
     <button class="menu-toggle" id="menuToggle" aria-label="Mở menu" aria-expanded="false"><i></i><i></i><i></i></button>
     <nav class="nav-menu" id="navMenu">
-      <a href="#home">Trang chủ</a><a href="#products">Sản phẩm</a><a href="#contact">Liên hệ</a>
+      <a href="#home">Trang chủ</a><a href="#products">Sản phẩm</a><a href="#contact">Liên hệ</a><button class="account-nav-btn" id="accountOpen">Tài khoản</button>
     </nav>
   </header>
 
@@ -69,6 +69,29 @@
       <div class="modal-body"><span class="modal-tag">HNShop • DIGITAL ITEM</span><h2 id="modalTitle"></h2><p id="modalDescription"></p><div class="modal-meta"><span>Giao hàng</span><b>Hỗ trợ nhanh chóng</b></div><a class="buy-button" id="buyButton" href="#" target="_blank" rel="noreferrer">Liên hệ mua hàng <span>↗</span></a><small class="modal-note">Vui lòng kiểm tra thông tin sản phẩm trước khi đặt mua.</small></div>
     </section>
   </div>
+
+  <div class="modal-backdrop" id="accountModal" aria-hidden="true">
+    <section class="product-modal account-modal" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+      <button class="modal-close" id="accountClose" aria-label="Đóng">×</button>
+      <div class="modal-body">
+        <span class="modal-tag">HNSHOP • CUSTOMER ACCOUNT</span>
+        <h2 id="accountTitle">Tài khoản khách hàng</h2>
+        <p id="accountState">Đăng nhập hoặc tạo tài khoản để tiếp tục mua key.</p>
+        <label for="accountEmail">Email</label>
+        <input id="accountEmail" type="email" autocomplete="email" placeholder="Nhập email của bạn">
+        <label for="accountPassword">Mật khẩu</label>
+        <input id="accountPassword" type="password" autocomplete="current-password" placeholder="Ít nhất 6 ký tự">
+        <div class="account-actions">
+          <button class="buy-button" id="accountLogin" type="button">Đăng nhập</button>
+          <button class="buy-button secondary-account" id="accountSignup" type="button">Tạo tài khoản</button>
+        </div>
+        <button id="accountLogout" class="account-logout" type="button" hidden>Đăng xuất</button>
+        <small class="modal-note">Dùng email và mật khẩu của bạn. Không chia sẻ mật khẩu hoặc mã xác minh cho bất kỳ ai.</small>
+        <p id="accountMessage" class="account-message" aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
