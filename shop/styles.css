@@ -363,3 +363,8 @@ body{animation:none!important}
   .hero::before,.hero::after,.products-panel{animation:none!important}
   .detail-btn,.buy-button,.account-nav-btn,.filter-btn.active,.hero-cta{transition:none!important}
 }
+
+/* Lựa chọn gói key */
+.package-choice-label{display:block;margin:16px 0 6px;color:#bfeeff;font-weight:700}
+.package-choice{display:block;width:100%;padding:13px 14px;margin:0 0 12px;border:1px solid rgba(40,190,255,.5);border-radius:10px;background:#071a32;color:#e9f8ff;font:inherit;outline:none}
+.package-choice:focus{border-color:#45dcff;box-shadow:0 0 0 3px rgba(40,190,255,.15)}
