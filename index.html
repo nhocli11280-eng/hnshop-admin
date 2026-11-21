@@ -73,6 +73,7 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 <button data-page="banners">Banner</button>
 <button data-page="orders">Đơn hàng</button>
 <button data-page="customers">Khách hàng</button>
+<button data-page="storeOrders">Đơn hàng cửa hàng</button>
 <button data-page="keys">Kho key</button>
 </nav>
 
@@ -178,6 +179,19 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 </div>
 </section>
 
+
+<section id="storeOrders" class="page hidden">
+<h2>Đơn hàng cửa hàng</h2>
+<div class="panel">
+<button id="refreshStoreOrders" class="secondary">Làm mới đơn hàng</button>
+<p id="storeOrderMessage" aria-live="polite"></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mã đơn</th><th>Tổng tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+<tbody id="storeOrderRows"><tr><td colspan="6">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+<div class="panel" id="storeOrderDetail">Chọn một đơn để xem chi tiết.</div>
+</section>
 
 <section id="keys" class="page hidden">
 <h2>Quản lý kho key</h2>
@@ -344,6 +358,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'orders') await loadOrders();
    if(btn.dataset.page === 'customers') await loadCustomers();
    if(btn.dataset.page === 'keys') await loadKeyProducts();
+   if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
   } catch(e) {
    fail(e);
   }
@@ -907,6 +922,68 @@ $('saveKeys').onclick = async () => {
     btn.textContent = 'Nhập key vào kho';
   }
 };
+
+/* ĐƠN HÀNG CỬA HÀNG */
+function storeMoney(value) {
+ return Number(value || 0).toLocaleString('vi-VN') + ' đ';
+}
+async function loadStoreOrders() {
+ $('storeOrderMessage').textContent = 'Đang tải đơn hàng...';
+ try {
+  const rows = await run(db.from('store_orders')
+   .select('id,total,status,transfer_note,created_at,paid_at')
+   .order('created_at', {ascending:false}).limit(100));
+  $('storeOrderRows').innerHTML = rows.length ? rows.map(x => `
+   <tr>
+    <td>${escapeHTML(x.id)}</td>
+    <td>${storeMoney(x.total)}</td>
+    <td><strong>${escapeHTML(x.transfer_note)}</strong></td>
+    <td>${escapeHTML(x.status)}</td>
+    <td>${date(x.created_at)}</td>
+    <td><div class="actions">
+     <button onclick="showStoreOrder('${escapeHTML(x.id)}')">Chi tiết</button>
+     ${x.status === 'pending' ? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button>` : ''}
+    </div></td>
+   </tr>`).join('') : '<tr><td colspan="6">Chưa có đơn hàng cửa hàng.</td></tr>';
+  $('storeOrderMessage').textContent = 'Đang hiển thị ' + rows.length + ' đơn gần nhất.';
+ } catch(e) {
+  $('storeOrderMessage').textContent = 'Lỗi tải đơn: ' + (e.message || e);
+ }
+}
+window.showStoreOrder = async id => {
+ try {
+  const order = await run(db.from('store_orders').select('id,total,status,transfer_note,created_at,paid_at')
+   .eq('id',id).single());
+  const items = await run(db.from('store_order_items')
+   .select('product_name,quantity,price').eq('order_id',id));
+  $('storeOrderDetail').innerHTML =
+   '<h3>Chi tiết đơn hàng</h3>' +
+   '<p><b>Mã đơn:</b> ' + escapeHTML(order.id) + '</p>' +
+   '<p><b>Tổng tiền:</b> ' + storeMoney(order.total) + '</p>' +
+   '<p><b>Nội dung chuyển khoản:</b> ' + escapeHTML(order.transfer_note) + '</p>' +
+   '<p><b>Trạng thái:</b> ' + escapeHTML(order.status) + '</p>' +
+   '<p><b>Ngày tạo:</b> ' + date(order.created_at) + '</p>' +
+   '<h4>Sản phẩm</h4>' +
+   (items.map(x => '<p>' + escapeHTML(x.product_name) + ' × ' +
+    escapeHTML(x.quantity) + ' — ' + storeMoney(x.price) + '</p>').join('') || 'Không có sản phẩm');
+ } catch(e) {
+  $('storeOrderDetail').textContent = 'Lỗi: ' + (e.message || e);
+ }
+};
+window.confirmStoreOrder = async id => {
+ if(!confirm('Bạn đã kiểm tra app MB Bank và chắc chắn đã nhận đủ tiền cho đơn này?')) return;
+ try {
+  const {data,error} = await db.rpc('confirm_store_payment',{p_order_id:id});
+  if(error) throw error;
+  if(data !== true) throw Error('Máy chủ chưa xác nhận hoàn tất cấp key.');
+  $('storeOrderMessage').textContent = 'Đã xác nhận thanh toán và cấp key thành công.';
+  await loadStoreOrders();
+  await showStoreOrder(id);
+ } catch(e) {
+  $('storeOrderMessage').textContent = 'Không thể xác nhận: ' + (e.message || e);
+ }
+};
+$('refreshStoreOrders').onclick = loadStoreOrders;
 
 /* KHÁCH HÀNG */
 async function loadCustomers() {
