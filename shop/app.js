@@ -15,6 +15,8 @@ let products = [];
 let categories = [];
 let activeFilter = "all";
 let currentUser = null;
+let selectedProduct = null;
+let pendingPurchase = null;
 
 function safe(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -164,10 +166,12 @@ grid.addEventListener("click", event => {
   document.getElementById("modalDescription").textContent =
     product.detail || product.description || "";
 
+  selectedProduct = product;
   const buyButton = document.getElementById("buyButton");
   buyButton.href = "#";
   buyButton.target = "_self";
-  buyButton.textContent = "Đăng nhập để mua key →";
+  buyButton.textContent = "Mua key • " + Number(product.price || 0).toLocaleString("vi-VN") + " đ →";
+  document.getElementById("modalPrice").textContent = Number(product.price || 0).toLocaleString("vi-VN") + " đ";
 
   modal.classList.add("show");
   modal.setAttribute("aria-hidden", "false");
@@ -248,6 +252,7 @@ document.getElementById("accountLogin").addEventListener("click",async()=>{
     currentUser=data.user;
     accountMessage.textContent="Đăng nhập thành công.";
     refreshAccountUI();
+    if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
   } catch(e) { accountMessage.textContent="Không đăng nhập được: "+(e.message||e); }
 });
 document.getElementById("accountSignup").addEventListener("click",async()=>{
@@ -263,6 +268,7 @@ document.getElementById("accountSignup").addEventListener("click",async()=>{
       currentUser=data.user;
       accountMessage.textContent="Tạo tài khoản thành công và đã đăng nhập.";
       refreshAccountUI();
+      if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
     } else {
       accountMessage.textContent="Đã tạo tài khoản. Hãy kiểm tra email để xác nhận, sau đó đăng nhập.";
     }
@@ -275,18 +281,69 @@ document.getElementById("accountLogout").addEventListener("click",async()=>{
   accountMessage.textContent="Đã đăng xuất.";
   refreshAccountUI();
 });
-document.getElementById("buyButton").addEventListener("click",e=>{
+document.getElementById("buyButton").addEventListener("click", async e => {
   e.preventDefault();
+  if (!selectedProduct) return;
   closeModal();
+  if (!currentUser) { pendingPurchase = selectedProduct; showAccount(); accountMessage.textContent = "Hãy đăng nhập hoặc tạo tài khoản để tiếp tục đặt hàng."; return; }
   showAccount();
-  accountMessage.textContent=currentUser
-    ? "Bạn đã đăng nhập. Phần đặt hàng và thanh toán sẽ được nối tiếp ở bước kế tiếp."
-    : "Hãy đăng nhập hoặc tạo tài khoản trước khi mua key.";
+  await createCustomerOrder(selectedProduct);
 });
 db.auth.onAuthStateChange((_event,session)=>{
   currentUser=session?.user||null;
   refreshAccountUI();
 });
 syncCustomerSession().catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
+
+
+/* CHECKOUT VÀ LỊCH SỬ KEY */
+function moneyVND(value) { return Number(value || 0).toLocaleString("vi-VN") + " đ"; }
+async function randomAccessHash() {
+  const bytes = new Uint8Array(32); crypto.getRandomValues(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, "0")).join("");
+}
+function purchaseMessage(html) { document.getElementById("purchasePanel").innerHTML = html; }
+async function createCustomerOrder(product) {
+  try {
+    if (!currentUser) throw new Error("Vui lòng đăng nhập trước khi đặt hàng.");
+    if (!product || Number(product.price) <= 0) throw new Error("Sản phẩm chưa có giá hợp lệ.");
+    accountMessage.textContent = "Đang tạo đơn hàng..."; purchaseMessage("");
+    const hash = await randomAccessHash();
+    const created = await db.rpc("create_store_order", {p_items:[{product_id:Number(product.id),quantity:1}],p_access_token_hash:hash});
+    if (created.error) throw created.error;
+    const detail = await db.rpc("get_store_order", {p_access_token_hash:hash});
+    if (detail.error) throw detail.error;
+    const order = Array.isArray(detail.data) ? detail.data[0] : detail.data;
+    if (!order || !order.id) throw new Error("Đơn đã tạo nhưng chưa đọc được chi tiết. Hãy kiểm tra lịch sử mua hàng.");
+    const setting = await db.from("payment_settings").select("qr_image_url").eq("id",1).maybeSingle();
+    const qrUrl = !setting.error && setting.data ? setting.data.qr_image_url || "" : "";
+    accountMessage.textContent = "Đơn hàng đã được tạo. Chuyển khoản đúng nội dung bên dưới.";
+    purchaseMessage('<div class="purchase-card"><h3>Đơn hàng của bạn</h3><p><b>Mã đơn:</b> '+safe(order.id)+'</p><p><b>Số tiền:</b> '+moneyVND(order.total)+'</p><p><b>Nội dung chuyển khoản:</b></p><div class="transfer-note">'+safe(order.transfer_note || "")+'</div>'+(qrUrl?'<img class="payment-qr" src="'+safe(qrUrl)+'" alt="QR thanh toán HNShop">':'<p class="purchase-warning">Admin chưa cài ảnh QR thanh toán. Vui lòng liên hệ HNShop trước khi chuyển khoản.</p>')+'<p class="purchase-warning">Đơn chỉ được xử lý sau khi Admin kiểm tra giao dịch MB Bank.</p><button type="button" class="buy-button" id="refreshMyOrders">Xem lịch sử mua hàng</button></div>');
+    document.getElementById("refreshMyOrders").addEventListener("click",loadMyOrders);
+  } catch(e) { accountMessage.textContent = "Không tạo được đơn hàng: " + (e.message || e); }
+}
+async function loadMyOrders() {
+  const panel = document.getElementById("purchasePanel"); panel.innerHTML = "<p>Đang tải lịch sử mua hàng...</p>";
+  try {
+    const result = await db.rpc("get_my_store_orders"); if (result.error) throw result.error;
+    const orders = Array.isArray(result.data) ? result.data : [];
+    if (!orders.length) { panel.innerHTML='<div class="purchase-card"><h3>Lịch sử mua hàng</h3><p>Bạn chưa có đơn hàng nào.</p></div>'; return; }
+    let html='<div class="purchase-card"><h3>Lịch sử mua hàng</h3>';
+    orders.forEach(o => {
+      html+='<div class="history-order"><p><b>Mã đơn:</b> '+safe(o.id)+'</p><p><b>Ngày tạo:</b> '+safe(new Date(o.created_at).toLocaleString("vi-VN"))+'</p><p><b>Tổng tiền:</b> '+moneyVND(o.total)+'</p><p><b>Trạng thái:</b> '+safe(o.status)+'</p>';
+      if(o.status==="pending") html+='<p class="purchase-warning">Đang chờ Admin xác nhận thanh toán.</p>';
+      (o.items||[]).forEach(item => {
+        html+='<div class="history-item"><b>'+safe(item.product_name)+' × '+safe(item.quantity)+'</b>';
+        if(item.keys&&item.keys.length) html+='<p>Key đã cấp:</p>'+item.keys.map(k=>'<code class="customer-key">'+safe(k)+'</code>').join("");
+        else html+='<p class="purchase-warning">Key sẽ hiển thị tại đây sau khi Admin xác nhận đã nhận tiền.</p>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+    panel.innerHTML=html+'</div>';
+  } catch(e) { panel.innerHTML='<p class="purchase-warning">Không tải được lịch sử: '+safe(e.message||e)+'</p>'; }
+}
+document.getElementById("accountHistory").addEventListener("click",loadMyOrders);
 
 loadProducts();
