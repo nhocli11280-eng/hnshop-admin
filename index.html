@@ -185,6 +185,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="storeOrders">Đơn hàng cửa hàng</button>
 <button data-page="keys">Kho key</button>
 <button data-page="payment">Cài đặt thanh toán</button>
+<button data-page="branding">Cài đặt cửa hàng</button>
 </nav>
 
 <main>
@@ -345,6 +346,20 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div style="margin:12px 0"><img id="paymentQrPreview" alt="QR thanh toán hiện tại" style="display:none;max-width:280px;width:100%;border:1px solid #ddd;border-radius:10px;padding:8px"></div>
 <p id="paymentQrStatus" aria-live="polite">Đang tải cài đặt...</p>
 <button id="savePaymentQr">Lưu và áp dụng QR</button>
+</div>
+</section>
+
+<section id="branding" class="page hidden">
+<h2>Cài đặt cửa hàng</h2>
+<div class="panel">
+<p>Thay đổi tên và logo hiển thị trên trang Shop. Ảnh logo hỗ trợ PNG, JPG hoặc WEBP, tối đa 5 MB.</p>
+<label>Tên shop</label>
+<input id="shopNameInput" type="text" maxlength="80" placeholder="Ví dụ: HNShop">
+<label>Logo shop</label>
+<input id="shopLogoFile" type="file" accept="image/png,image/jpeg,image/webp">
+<div style="margin:12px 0"><img id="shopLogoPreview" alt="Logo shop hiện tại" style="display:none;max-width:180px;max-height:120px;object-fit:contain;border:1px solid #ddd;border-radius:10px;padding:8px;background:#fff"></div>
+<p id="shopBrandStatus" aria-live="polite">Đang tải cài đặt...</p>
+<button id="saveShopBrand">Lưu tên và logo</button>
 </div>
 </section>
 
@@ -518,6 +533,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'keys') await loadKeyProducts();
    if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
    if(btn.dataset.page === 'payment') await loadPaymentSettings();
+   if(btn.dataset.page === 'branding') await loadShopBrand();
   } catch(e) {
    fail(e);
   }
@@ -1211,7 +1227,7 @@ $('refreshStoreOrders').onclick = loadStoreOrders;
 async function loadPaymentSettings() {
  $('paymentQrStatus').textContent = 'Đang tải QR hiện tại...';
  try {
-  const rows = await run(db.from('payment_settings').select('id,qr_image_url').eq('id',1).limit(1));
+  const rows = await run(db.from('payment_settings').select('id,qr_image_url,shop_name,logo_image_url').eq('id',1).limit(1));
   const url = rows[0]?.qr_image_url || '';
   const img = $('paymentQrPreview');
   if(url) { img.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(); img.style.display = 'block'; }
@@ -1240,6 +1256,48 @@ $('savePaymentQr').onclick = async () => {
  } catch(e) {
   $('paymentQrStatus').textContent = 'Không lưu được QR: ' + (e.message || e);
  } finally { btn.disabled = false; btn.textContent = 'Lưu và áp dụng QR'; }
+};
+
+/* CÀI ĐẶT TÊN VÀ LOGO SHOP */
+async function loadShopBrand() {
+ $('shopBrandStatus').textContent = 'Đang tải cài đặt...';
+ try {
+  const rows = await run(db.from('payment_settings').select('id,shop_name,logo_image_url').eq('id',1).limit(1));
+  const row = rows[0] || {};
+  $('shopNameInput').value = row.shop_name || 'HNShop';
+  const img = $('shopLogoPreview');
+  if(row.logo_image_url) { img.src = row.logo_image_url + (row.logo_image_url.includes('?') ? '&' : '?') + 'v=' + Date.now(); img.style.display = 'block'; }
+  else { img.removeAttribute('src'); img.style.display = 'none'; }
+  $('shopBrandStatus').textContent = 'Đã tải cài đặt tên và logo hiện tại.';
+ } catch(e) {
+  $('shopBrandStatus').textContent = 'Không tải được cài đặt. Hãy chạy SQL bổ sung cột shop_name và logo_image_url: ' + (e.message || e);
+ }
+}
+$('saveShopBrand').onclick = async () => {
+ const btn = $('saveShopBrand');
+ try {
+  const name = $('shopNameInput').value.trim();
+  if(!name) throw Error('Tên shop không được để trống.');
+  const file = $('shopLogoFile').files[0];
+  let logoUrl;
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  if(file) {
+   if(!['image/png','image/jpeg','image/webp'].includes(file.type)) throw Error('Logo chỉ hỗ trợ PNG, JPG hoặc WEBP.');
+   if(file.size > 5 * 1024 * 1024) throw Error('Logo tối đa 5 MB.');
+   const path = 'shop-brand/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+   const {data,error} = await db.storage.from('hnshop-images').upload(path,file,{contentType:file.type,upsert:false});
+   if(error) throw error;
+   logoUrl = db.storage.from('hnshop-images').getPublicUrl(data.path).data.publicUrl;
+  }
+  const payload = {id:1,shop_name:name,updated_at:new Date().toISOString()};
+  if(logoUrl) payload.logo_image_url = logoUrl;
+  await run(db.from('payment_settings').upsert(payload,{onConflict:'id'}).select().single());
+  $('shopLogoFile').value = '';
+  await loadShopBrand();
+  $('shopBrandStatus').textContent = 'Đã lưu tên và logo shop. Tải lại trang Shop để xem thay đổi.';
+ } catch(e) {
+  $('shopBrandStatus').textContent = 'Không lưu được: ' + (e.message || e);
+ } finally { btn.disabled = false; btn.textContent = 'Lưu tên và logo'; }
 };
 
 /* KHÁCH HÀNG SHOP */
