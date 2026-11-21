@@ -209,7 +209,39 @@ $('loginBtn').onclick=async()=>{
  if(error){$('loginMsg').textContent=error.message;return}
  await verifyAdmin();
 };
-$('logoutBtn').onclick=async()=>{await db.auth.signOut();location.reload()};
+
+async function loadDashboard(){
+  try {
+    const [p,c,o,u] = await Promise.all([
+      run(db.from('products').select('id')),
+      run(db.from('categories').select('id')),
+      run(db.from('orders').select('id')),
+      run(db.from('customers').select('id'))
+    ]);
+
+    $('statProducts').textContent = p.length;
+    $('statCategories').textContent = c.length;
+    $('statOrders').textContent = o.length;
+    $('statCustomers').textContent = u.length;
+
+    const recent = await run(
+      db.from('orders')
+        .select('id,total,status,created_at')
+        .order('created_at',{ascending:false})
+        .limit(5)
+    );
+
+    $('recentOrders').innerHTML = recent.length
+      ? recent.map(x =>
+          `<p>Đơn #${x.id} — ${money(x.total)} — ${escapeHTML(x.status)}</p>`
+        ).join('')
+      : 'Chưa có đơn hàng';
+
+  } catch(e) {
+    fail(e);
+  }
+}
+
 
 document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
