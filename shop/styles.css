@@ -368,3 +368,12 @@ body{animation:none!important}
 .package-choice-label{display:block;margin:16px 0 6px;color:#bfeeff;font-weight:700}
 .package-choice{display:block;width:100%;padding:13px 14px;margin:0 0 12px;border:1px solid rgba(40,190,255,.5);border-radius:10px;background:#071a32;color:#e9f8ff;font:inherit;outline:none}
 .package-choice:focus{border-color:#45dcff;box-shadow:0 0 0 3px rgba(40,190,255,.15)}
+
+
+/* Lịch sử mua hàng và đồng hồ thanh toán 10 phút */
+.payment-countdown{display:grid;gap:4px;margin:14px 0;padding:13px;text-align:center;border:1px solid #168fc4;border-radius:11px;background:linear-gradient(135deg,#061b34,#092d4c);box-shadow:0 0 18px #008dff22}
+.payment-countdown span,.payment-countdown small{color:#a9d9ef;font-size:11px}
+.payment-countdown strong{font:900 30px "Barlow Condensed","Be Vietnam Pro",sans-serif;letter-spacing:2px;color:#62eaff;text-shadow:0 0 14px #00bfff88}
+.payment-countdown strong.countdown-expired{color:#ff9d9d;text-shadow:0 0 12px #ff343455}
+#historyOpen{white-space:nowrap}
+@media(max-width:700px){#historyOpen{padding:8px 9px;font-size:10px}}
