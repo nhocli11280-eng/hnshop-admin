@@ -296,3 +296,70 @@ body{animation:none!important}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+
+/* HNShop lightweight blue-neon gaming interface */
+:root{
+  --hn-glow:#20cfff;
+  --hn-glow-soft:rgba(32,207,255,.24);
+}
+/* Moving blue energy streak across the hero */
+.hero{isolation:isolate;overflow:hidden}
+.hero::before{
+  z-index:1!important;
+  background:linear-gradient(105deg,transparent 28%,rgba(20,177,255,.05) 40%,rgba(76,226,255,.55) 48%,rgba(255,255,255,.28) 50%,rgba(20,135,255,.25) 53%,transparent 65%)!important;
+  animation:hnLightRay 7s ease-in-out infinite!important;
+}
+.hero::after{
+  opacity:.45;
+  background:linear-gradient(125deg,transparent 0 35%,rgba(0,153,255,.12) 48%,transparent 60%)!important;
+  animation:hnRayGlow 5s ease-in-out infinite alternate!important;
+}
+@keyframes hnLightRay{
+  0%,12%{transform:translateX(-115%) skewX(-18deg);opacity:0}
+  28%{opacity:.9}
+  62%,100%{transform:translateX(115%) skewX(-18deg);opacity:0}
+}
+@keyframes hnRayGlow{from{opacity:.18}to{opacity:.62}}
+/* Subtle animated neon frame around the catalogue */
+.products-panel{
+  position:relative;
+  border:1px solid transparent!important;
+  background:
+    linear-gradient(145deg,rgba(3,18,36,.97),rgba(2,9,22,.98)) padding-box,
+    linear-gradient(115deg,#07517c,#19cfff,#1749a4,#07517c) border-box!important;
+  background-size:auto,260% 260%!important;
+  animation:hnFrameFlow 12s linear infinite;
+}
+@keyframes hnFrameFlow{0%{background-position:0 0,0% 50%}100%{background-position:0 0,100% 50%}}
+/* Clean neon edge and gentle hover response on product tiles */
+.product-card{
+  border:1px solid rgba(45,174,255,.38)!important;
+  box-shadow:0 6px 20px rgba(0,0,0,.26),inset 0 0 16px rgba(0,144,255,.035)!important;
+}
+.product-card:hover{
+  border-color:#38dfff!important;
+  box-shadow:0 8px 25px rgba(0,145,255,.18),0 0 13px rgba(0,207,255,.12)!important;
+}
+/* Buttons glow softly without heavy filters or large shadows */
+.detail-btn,.buy-button,.account-nav-btn,.filter-btn.active,.hero-cta,
+.account-actions button{
+  transition:box-shadow .2s ease,border-color .2s ease,background-color .2s ease!important;
+}
+.detail-btn:hover,.buy-button:hover,.account-nav-btn:hover,.hero-cta:hover,
+.account-actions button:hover{
+  box-shadow:0 0 10px rgba(32,207,255,.34),0 0 20px rgba(32,132,255,.18)!important;
+}
+.account-nav-btn{border-color:#159bc9;box-shadow:0 0 8px rgba(32,207,255,.12)}
+/* A small cyan highlight on section headings */
+.section-heading h2{ text-shadow:0 0 14px rgba(32,207,255,.14) }
+/* Mobile: keep effects short and inexpensive */
+@media(max-width:700px){
+  .products-panel{animation-duration:18s}
+  .hero::after{animation-duration:8s!important}
+  .product-card:hover{transform:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero::before,.hero::after,.products-panel{animation:none!important}
+  .detail-btn,.buy-button,.account-nav-btn,.filter-btn.active,.hero-cta{transition:none!important}
+}
