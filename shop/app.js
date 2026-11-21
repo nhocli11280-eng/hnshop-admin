@@ -412,7 +412,7 @@ async function loadMyOrders() {
       html+='<div class="history-order"><p><b>Mã đơn:</b> '+safe(o.id)+'</p><p><b>Ngày tạo:</b> '+safe(new Date(o.created_at).toLocaleString("vi-VN"))+'</p><p><b>Tổng tiền:</b> '+moneyVND(o.total)+'</p><p><b>Trạng thái:</b> '+safe(o.status)+'</p>';
       if(o.status==="pending") html+='<p class="purchase-warning">Đang chờ Admin xác nhận thanh toán.</p>';
       (o.items||[]).forEach(item => {
-        html+='<div class="history-item"><b>'+safe(item.product_name)+' × '+safe(item.quantity)+'</b>';
+        html+='<div class="history-item"><b>'+safe(item.product_name)+' — '+safe(item.package_name || "Gói key")+' × '+safe(item.quantity)+'</b>';
         if(item.keys&&item.keys.length) html+='<p>Key đã cấp:</p>'+item.keys.map(k=>'<code class="customer-key">'+safe(k)+'</code>').join("");
         else html+='<p class="purchase-warning">Key sẽ hiển thị tại đây sau khi Admin xác nhận đã nhận tiền.</p>';
         html+='</div>';
