@@ -218,3 +218,57 @@ button,.hero-cta{
   body::after{animation:none}
   .product-card,.product-item,.product{transition:none}
 }
+
+
+/* HNSHOP gaming polish: animated dark arena + readable neon product typography */
+.product-card,.product-item,.product,.product-tile{
+  color:#eaf6ff!important;
+  border:1px solid rgba(48,166,255,.28)!important;
+  background:linear-gradient(145deg,rgba(7,22,43,.97),rgba(3,10,24,.98))!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(95,190,255,.08);
+}
+.product-card h2,.product-card h3,.product-card .product-name,
+.product-item h2,.product-item h3,.product-item .product-name,
+.product h2,.product h3,.product .product-name,
+.product-tile h2,.product-tile h3{
+  color:#f2f8ff!important;
+  text-shadow:0 0 12px rgba(0,174,255,.22);
+  font-weight:800;
+}
+.product-card p,.product-item p,.product p,.product-tile p,
+.product-card .description,.product-item .description{
+  color:#a9c5df!important;
+}
+.product-card .price,.product-item .price,.product .price,.product-tile .price,
+.product-card [class*="price"],.product-item [class*="price"]{
+  color:#45e6ff!important;
+  font-weight:900!important;
+  text-shadow:0 0 14px rgba(0,210,255,.35);
+}
+.product-card button,.product-item button,.product-tile button{
+  color:#f5fbff!important;
+  background:linear-gradient(110deg,#0756a8,#087fbd)!important;
+  border:1px solid rgba(77,205,255,.65)!important;
+  box-shadow:0 0 16px rgba(0,153,255,.2);
+}
+.product-card:hover,.product-item:hover,.product-tile:hover{
+  border-color:rgba(53,203,255,.8)!important;
+  box-shadow:0 0 26px rgba(0,145,255,.2),0 14px 34px rgba(0,0,0,.42);
+  transform:translateY(-3px);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.20;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(49,160,255,.045) 4px 5px);
+  animation:hnScanDrift 14s linear infinite;
+}
+@keyframes hnScanDrift{from{background-position:0 0}to{background-position:0 120px}}
+@media(prefers-reduced-motion:reduce){
+  body::after{animation:none!important}
+  .product-card:hover,.product-item:hover,.product-tile:hover{transform:none}
+}
