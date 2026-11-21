@@ -272,3 +272,27 @@ body::after{
   body::after{animation:none!important}
   .product-card:hover,.product-item:hover,.product-tile:hover{transform:none}
 }
+
+
+/* Mobile performance + crisp images: keep the gaming look without expensive live filters */
+.hero-art,.product-visual img,.product-modal>img,.payment-qr{
+  filter:none!important;
+  image-rendering:auto;
+  backface-visibility:hidden;
+}
+.hero-art{animation:none!important;transform:none!important}
+.hero::before,.hero::after,.hero-scan{animation:none!important}
+.product-card:hover .product-visual img{transform:none!important}
+.ambient{filter:none!important;opacity:.12!important}
+.modal-backdrop{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body::before,body::after{animation:none!important}
+body{animation:none!important}
+@media(max-width:700px){
+  .hero-art{object-position:center;transform:none!important}
+  .product-card,.product-card:hover{transition:none!important;transform:none!important}
+  .product-visual img{transform:none!important;transition:none!important}
+  .site-header{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
