@@ -251,7 +251,7 @@ accountModal.addEventListener("click",e=>{if(e.target===accountModal)hideAccount
 document.getElementById("accountLogin").addEventListener("click",async()=>{
   const username=document.getElementById("accountEmail").value.trim().toLowerCase();
   const password=document.getElementById("accountPassword").value;
-  if(!/^[a-z0-9._-]{3,24}$/.test(username)) { accountMessage.textContent="Tên tài khoản gồm 3–24 ký tự: chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang."; return; }
+  if(!username.includes("@") && !/^[a-z0-9._-]{3,24}$/.test(username)) { accountMessage.textContent="Tên tài khoản gồm 3–24 ký tự: chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang."; return; }
   if(!password) { accountMessage.textContent="Vui lòng nhập mật khẩu."; return; }
   accountMessage.textContent="Đang đăng nhập...";
   try {
