@@ -21,3 +21,14 @@
 .account-logout{margin-top:12px;width:100%;padding:11px;border:1px solid #8b4652;border-radius:9px;background:#3c1724;color:#ffdce1;font-weight:700}
 .account-message{font-size:12px;color:#7ee7ff;overflow-wrap:anywhere}
 .account-actions [hidden],.account-logout[hidden]{display:none}
+
+.purchase-card{margin-top:16px;padding:14px;border:1px solid #24506c;border-radius:13px;background:#061426;color:#e5f6ff}
+.purchase-card h3{font-size:16px;margin:0 0 12px;color:#65e2f7}
+.purchase-card p,.history-order p{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.transfer-note{padding:12px;text-align:center;border:1px dashed #43cde9;border-radius:9px;color:#7af0ff;font-weight:900;letter-spacing:1px;overflow-wrap:anywhere}
+.payment-qr{display:block;width:min(260px,100%);height:auto;margin:16px auto;border-radius:12px;background:white}
+.purchase-warning{color:#ffd58b!important}
+.purchase-card .buy-button{width:100%;border:0;cursor:pointer;justify-content:center;font:800 12px "Be Vietnam Pro"}
+.history-order{padding:12px 0;border-top:1px solid #1c3a54}
+.history-item{margin-top:10px;padding:10px;border-radius:9px;background:#0b2035}
+.customer-key{display:block;margin:6px 0;padding:9px;background:#03101d;border:1px solid #27617b;border-radius:7px;color:#8ff4c7;overflow-wrap:anywhere;white-space:normal}
