@@ -14,6 +14,7 @@ const modal = document.getElementById("productModal");
 let products = [];
 let categories = [];
 let activeFilter = "all";
+let currentUser = null;
 
 function safe(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -163,8 +164,10 @@ grid.addEventListener("click", event => {
   document.getElementById("modalDescription").textContent =
     product.detail || product.description || "";
 
-  document.getElementById("buyButton").href =
-    "https://www.facebook.com/";
+  const buyButton = document.getElementById("buyButton");
+  buyButton.href = "#";
+  buyButton.target = "_self";
+  buyButton.textContent = "Đăng nhập để mua key →";
 
   modal.classList.add("show");
   modal.setAttribute("aria-hidden", "false");
@@ -199,5 +202,91 @@ nav.querySelectorAll("a").forEach(link => {
 
 document.getElementById("year").textContent =
   new Date().getFullYear();
+
+
+/* TÀI KHOẢN KHÁCH HÀNG */
+const accountModal = document.getElementById("accountModal");
+const accountMessage = document.getElementById("accountMessage");
+function showAccount() {
+  accountModal.classList.add("show");
+  accountModal.setAttribute("aria-hidden","false");
+  document.body.style.overflow = "hidden";
+  refreshAccountUI();
+}
+function hideAccount() {
+  accountModal.classList.remove("show");
+  accountModal.setAttribute("aria-hidden","true");
+  document.body.style.overflow = "";
+}
+function refreshAccountUI() {
+  const logged = !!currentUser;
+  document.getElementById("accountState").textContent = logged
+    ? "Đã đăng nhập: " + currentUser.email
+    : "Đăng nhập hoặc tạo tài khoản để tiếp tục mua key.";
+  document.getElementById("accountLogin").hidden = logged;
+  document.getElementById("accountSignup").hidden = logged;
+  document.getElementById("accountLogout").hidden = !logged;
+  document.getElementById("accountEmail").hidden = logged;
+  document.getElementById("accountPassword").hidden = logged;
+}
+async function syncCustomerSession() {
+  const {data,error} = await db.auth.getSession();
+  if(error) throw error;
+  currentUser = data.session?.user || null;
+  refreshAccountUI();
+}
+document.getElementById("accountOpen").addEventListener("click",showAccount);
+document.getElementById("accountClose").addEventListener("click",hideAccount);
+accountModal.addEventListener("click",e=>{if(e.target===accountModal)hideAccount();});
+document.getElementById("accountLogin").addEventListener("click",async()=>{
+  const email=document.getElementById("accountEmail").value.trim();
+  const password=document.getElementById("accountPassword").value;
+  accountMessage.textContent="Đang đăng nhập...";
+  try {
+    const {data,error}=await db.auth.signInWithPassword({email,password});
+    if(error) throw error;
+    currentUser=data.user;
+    accountMessage.textContent="Đăng nhập thành công.";
+    refreshAccountUI();
+  } catch(e) { accountMessage.textContent="Không đăng nhập được: "+(e.message||e); }
+});
+document.getElementById("accountSignup").addEventListener("click",async()=>{
+  const email=document.getElementById("accountEmail").value.trim();
+  const password=document.getElementById("accountPassword").value;
+  if(!email) { accountMessage.textContent="Vui lòng nhập email."; return; }
+  if(password.length<6) { accountMessage.textContent="Mật khẩu cần ít nhất 6 ký tự."; return; }
+  accountMessage.textContent="Đang tạo tài khoản...";
+  try {
+    const {data,error}=await db.auth.signUp({email,password});
+    if(error) throw error;
+    if(data.session) {
+      currentUser=data.user;
+      accountMessage.textContent="Tạo tài khoản thành công và đã đăng nhập.";
+      refreshAccountUI();
+    } else {
+      accountMessage.textContent="Đã tạo tài khoản. Hãy kiểm tra email để xác nhận, sau đó đăng nhập.";
+    }
+  } catch(e) { accountMessage.textContent="Không tạo được tài khoản: "+(e.message||e); }
+});
+document.getElementById("accountLogout").addEventListener("click",async()=>{
+  const {error}=await db.auth.signOut();
+  if(error) { accountMessage.textContent="Không đăng xuất được: "+error.message; return; }
+  currentUser=null;
+  accountMessage.textContent="Đã đăng xuất.";
+  refreshAccountUI();
+});
+document.getElementById("buyButton").addEventListener("click",e=>{
+  e.preventDefault();
+  closeModal();
+  showAccount();
+  accountMessage.textContent=currentUser
+    ? "Bạn đã đăng nhập. Phần đặt hàng và thanh toán sẽ được nối tiếp ở bước kế tiếp."
+    : "Hãy đăng nhập hoặc tạo tài khoản trước khi mua key.";
+});
+db.auth.onAuthStateChange((_event,session)=>{
+  currentUser=session?.user||null;
+  refreshAccountUI();
+});
+syncCustomerSession().catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
 
 loadProducts();
