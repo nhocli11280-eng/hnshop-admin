@@ -181,6 +181,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="banners">Banner</button>
 <button data-page="orders">Đơn hàng</button>
 <button data-page="customers">Khách hàng</button>
+<button data-page="customerAccess">Khóa tài khoản</button>
 <button data-page="storeOrders">Đơn hàng cửa hàng</button>
 <button data-page="keys">Kho key</button>
 <button data-page="payment">Cài đặt thanh toán</button>
@@ -289,6 +290,19 @@ tr:hover td{background:rgba(0,145,220,.055)}
 </div>
 </section>
 
+
+
+<section id="customerAccess" class="page hidden">
+<h2>Quản lý quyền truy cập khách hàng</h2>
+<div class="panel">
+<p>Khóa tài khoản sẽ khiến khách bị đăng xuất khỏi shop và không thể tiếp tục mua key.</p>
+<button id="refreshCustomerAccess" class="secondary">Làm mới danh sách</button>
+<div class="table-wrap"><table>
+<thead><tr><th>Tài khoản</th><th>Email</th><th>Ngày ghi nhận</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<tbody id="customerAccessRows"><tr><td colspan="5">Nhấn Làm mới danh sách.</td></tr></tbody>
+</table></div>
+</div>
+</section>
 
 <section id="storeOrders" class="page hidden">
 <h2>Đơn hàng cửa hàng</h2>
@@ -479,6 +493,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'banners') await loadBanners();
    if(btn.dataset.page === 'orders') await loadOrders();
    if(btn.dataset.page === 'customers') await loadCustomers();
+   if(btn.dataset.page === 'customerAccess') await loadCustomerAccess();
    if(btn.dataset.page === 'keys') await loadKeyProducts();
    if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
    if(btn.dataset.page === 'payment') await loadPaymentSettings();
@@ -1191,6 +1206,31 @@ async function loadCustomers() {
   `).join('')
   : '<tr><td colspan="5">Chưa có khách hàng</td></tr>';
 }
+
+
+/* QUẢN LÝ KHÓA TÀI KHOẢN SHOP */
+async function loadCustomerAccess() {
+ const {data,error}=await db.rpc('admin_list_shop_customers');
+ if(error) throw error;
+ const rows=Array.isArray(data)?data:[];
+ $('customerAccessRows').innerHTML=rows.length?rows.map(x=>`
+  <tr><td>${escapeHTML(x.username || 'Khách hàng')}</td>
+  <td>${escapeHTML(x.email || '')}</td><td>${date(x.created_at)}</td>
+  <td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
+  <td><button class="${x.is_blocked?'secondary':'danger'}" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',${!x.is_blocked})">${x.is_blocked?'Mở khóa':'Kích khỏi shop'}</button></td></tr>
+ `).join(''):'<tr><td colspan="5">Chưa có tài khoản. Khách cần đăng nhập shop ít nhất một lần.</td></tr>';
+}
+window.toggleShopCustomer=async(userId,blocked)=>{
+ if(!confirm(blocked?'Khóa tài khoản này và buộc đăng xuất khỏi shop?':'Mở khóa tài khoản này?')) return;
+ try {
+  const {data,error}=await db.rpc('admin_set_shop_customer_blocked',{p_user_id:userId,p_blocked:blocked});
+  if(error) throw error;
+  if(data!==true) throw Error('Không tìm thấy tài khoản.');
+  await loadCustomerAccess();
+  message(blocked?'Đã khóa tài khoản khỏi shop.':'Đã mở khóa tài khoản.');
+ } catch(e){fail(e);}
+};
+$('refreshCustomerAccess').onclick=()=>loadCustomerAccess().catch(fail);
 
 /* KHỞI ĐỘNG */
 checkSession();
