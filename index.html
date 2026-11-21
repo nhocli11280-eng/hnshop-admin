@@ -73,6 +73,7 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 <button data-page="banners">Banner</button>
 <button data-page="orders">Đơn hàng</button>
 <button data-page="customers">Khách hàng</button>
+<button data-page="keys">Kho key</button>
 </nav>
 
 <main>
@@ -174,6 +175,36 @@ th,td{padding:11px;border-bottom:1px solid #edf0f5;text-align:left;font-size:14p
 <thead><tr><th>ID</th><th>Họ tên</th><th>Điện thoại</th><th>Email</th><th>Ngày tạo</th></tr></thead>
 <tbody id="customerRows"></tbody>
 </table>
+</div>
+</section>
+
+
+<section id="keys" class="page hidden">
+<h2>Quản lý kho key</h2>
+<div class="panel">
+<p>Chọn sản phẩm và nhập mỗi key trên một dòng. Key được lưu riêng trong kho Supabase.</p>
+<label>Sản phẩm</label>
+<select id="keyProduct"><option value="">Đang tải sản phẩm...</option></select>
+<label>Danh sách key</label>
+<textarea id="keyInput" rows="8" placeholder="KEY-AAAA-1111&#10;KEY-BBBB-2222&#10;KEY-CCCC-3333"></textarea>
+<div class="actions">
+<button id="saveKeys">Nhập key vào kho</button>
+<button class="secondary" id="refreshKeys">Làm mới thống kê</button>
+</div>
+<p id="keyMessage" aria-live="polite"></p>
+</div>
+<div class="stats">
+<div class="stat">Key còn<strong id="availableKeys">0</strong></div>
+<div class="stat">Key đã cấp<strong id="deliveredKeys">0</strong></div>
+</div>
+<div class="panel">
+<h3>Key mới nhập gần đây</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Key</th><th>Trạng thái</th><th>Ngày nhập</th></tr></thead>
+<tbody id="keyRows"><tr><td colspan="3">Chọn sản phẩm để xem kho key</td></tr></tbody>
+</table>
+</div>
 </div>
 </section>
 
@@ -312,6 +343,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'banners') await loadBanners();
    if(btn.dataset.page === 'orders') await loadOrders();
    if(btn.dataset.page === 'customers') await loadCustomers();
+   if(btn.dataset.page === 'keys') await loadKeyProducts();
   } catch(e) {
    fail(e);
   }
@@ -772,6 +804,108 @@ window.changeStatus = async id => {
  } catch(e) {
   fail(e);
  }
+};
+
+
+/* KHO KEY */
+async function loadKeyProducts() {
+  const rows = await run(
+    db.from('products').select('id,name').order('name')
+  );
+  $('keyProduct').innerHTML =
+    '<option value="">-- Chọn sản phẩm --</option>' +
+    rows.map(p => '<option value="' + escapeHTML(p.id) + '">' +
+      escapeHTML(p.name) + '</option>').join('');
+  await loadKeyStats();
+}
+
+async function loadKeyStats() {
+  const productId = $('keyProduct').value;
+  if (!productId) {
+    $('availableKeys').textContent = '0';
+    $('deliveredKeys').textContent = '0';
+    $('keyRows').innerHTML = '<tr><td colspan="3">Chọn sản phẩm để xem kho key</td></tr>';
+    return;
+  }
+
+  const [available, delivered, recent] = await Promise.all([
+    db.from('product_keys').select('id', {count:'exact', head:true})
+      .eq('product_id', Number(productId)).eq('status', 'available'),
+    db.from('product_keys').select('id', {count:'exact', head:true})
+      .eq('product_id', Number(productId)).eq('status', 'delivered'),
+    db.from('product_keys').select('key_value,status,created_at')
+      .eq('product_id', Number(productId))
+      .order('created_at', {ascending:false}).limit(30)
+  ]);
+
+  if (available.error) throw available.error;
+  if (delivered.error) throw delivered.error;
+  if (recent.error) throw recent.error;
+
+  $('availableKeys').textContent = available.count ?? 0;
+  $('deliveredKeys').textContent = delivered.count ?? 0;
+  $('keyRows').innerHTML = recent.data.length
+    ? recent.data.map(k => '<tr><td>' + escapeHTML(k.key_value) +
+      '</td><td>' + (k.status === 'available' ? 'Còn' : 'Đã cấp') +
+      '</td><td>' + date(k.created_at) + '</td></tr>').join('')
+    : '<tr><td colspan="3">Sản phẩm chưa có key</td></tr>';
+}
+
+$('keyProduct').onchange = async () => {
+  try {
+    $('keyMessage').textContent = '';
+    await loadKeyStats();
+  } catch (e) {
+    $('keyMessage').textContent = 'Không tải được kho key: ' + (e.message || e);
+  }
+};
+
+$('refreshKeys').onclick = async () => {
+  try {
+    await loadKeyStats();
+    $('keyMessage').textContent = 'Đã cập nhật kho key.';
+  } catch (e) {
+    $('keyMessage').textContent = 'Lỗi: ' + (e.message || e);
+  }
+};
+
+$('saveKeys').onclick = async () => {
+  const btn = $('saveKeys');
+  try {
+    const productId = Number($('keyProduct').value);
+    const keys = [...new Set($('keyInput').value.split(/\\r?\\n/)
+      .map(x => x.trim()).filter(Boolean))];
+
+    if (!productId) throw Error('Bạn chưa chọn sản phẩm.');
+    if (!keys.length) throw Error('Bạn chưa nhập key.');
+    if (keys.length > 500) throw Error('Mỗi lần chỉ nhập tối đa 500 key.');
+
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+
+    const rows = keys.map(key => ({
+      product_id: productId,
+      key_value: key,
+      status: 'available'
+    }));
+
+    const {error} = await db.from('product_keys').upsert(rows, {
+      onConflict: 'product_id,key_value',
+      ignoreDuplicates: true
+    });
+    if (error) throw error;
+
+    $('keyInput').value = '';
+    $('keyMessage').textContent = 'Đã xử lý ' + keys.length +
+      ' key. Key trùng đã được bỏ qua.';
+    await loadKeyStats();
+  } catch (e) {
+    $('keyMessage').textContent = 'Không lưu được key: ' + (e.message || e) +
+      '. Nếu báo permission/RLS, cần chạy SQL cấp quyền Admin cho bảng product_keys.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Nhập key vào kho';
+  }
 };
 
 /* KHÁCH HÀNG */
