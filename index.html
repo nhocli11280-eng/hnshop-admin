@@ -170,7 +170,10 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div id="app">
 <header>
 <strong>HNShop ADMIN</strong>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<button id="adminDiagnosticsBtn" class="secondary" type="button">Kiểm tra & sửa lỗi</button>
 <button id="logoutBtn">Đăng xuất</button>
+</div>
 </header>
 
 <div class="layout">
@@ -190,6 +193,12 @@ tr:hover td{background:rgba(0,145,220,.055)}
 
 <main>
 <div id="message"></div>
+<section id="adminDiagnosticsPanel" class="panel hidden" aria-live="polite">
+<h3>Kiểm tra hệ thống Admin</h3>
+<p id="adminDiagnosticsSummary">Chưa chạy kiểm tra.</p>
+<ul id="adminDiagnosticsResults"></ul>
+<p style="font-size:13px;color:#9bc6df">Chỉ tự sửa lỗi hiển thị điều hướng an toàn. Không tự thay đổi dữ liệu, đơn hàng, tài khoản hoặc cấu hình Supabase.</p>
+</section>
 
 <section id="dashboard" class="page">
 <h2>Tổng quan</h2>
@@ -1400,6 +1409,83 @@ window.toggleShopCustomer=async(userId,blocked)=>{
  } catch(e){fail(e);}
 };
 $('refreshCustomerAccess').onclick=()=>loadCustomerAccess().catch(fail);
+
+/* KIỂM TRA & KHẮC PHỤC AN TOÀN ADMIN */
+const adminRuntimeErrors=[];
+window.addEventListener('error',event=>{
+ adminRuntimeErrors.push('JavaScript: '+(event.message||'Lỗi không xác định'));
+ if(adminRuntimeErrors.length>20) adminRuntimeErrors.shift();
+});
+window.addEventListener('unhandledrejection',event=>{
+ const reason=event.reason;
+ adminRuntimeErrors.push('Tác vụ nền: '+(reason?.message||String(reason||'Promise bị từ chối')));
+ if(adminRuntimeErrors.length>20) adminRuntimeErrors.shift();
+});
+$('adminDiagnosticsBtn').onclick=async()=>{
+ const btn=$('adminDiagnosticsBtn');
+ const panel=$('adminDiagnosticsPanel');
+ const summary=$('adminDiagnosticsSummary');
+ const list=$('adminDiagnosticsResults');
+ btn.disabled=true;
+ btn.textContent='Đang kiểm tra...';
+ panel.classList.remove('hidden');
+ list.replaceChildren();
+ const results=[];
+ let repaired=0;
+ const add=(label,ok,detail)=>results.push({label,ok,detail});
+ try{
+  // Kiểm tra cấu trúc ID và liên kết điều hướng.
+  const ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
+  const duplicates=ids.filter((id,index)=>ids.indexOf(id)!==index);
+  add('ID giao diện',duplicates.length===0,duplicates.length?'ID bị trùng: '+[...new Set(duplicates)].join(', '):'Không phát hiện ID trùng.');
+  const navButtons=[...document.querySelectorAll('nav button[data-page]')];
+  const invalidNav=navButtons.filter(b=>!$(b.dataset.page));
+  add('Điều hướng các mục Admin',invalidNav.length===0,invalidNav.length?'Mục không có trang tương ứng: '+invalidNav.map(b=>b.textContent.trim()).join(', '):navButtons.length+' mục điều hướng có trang tương ứng.');
+  // Tự khôi phục trạng thái hiển thị nếu các tab bị lệch trạng thái.
+  if(!invalidNav.length){
+   const active=navButtons.filter(b=>b.classList.contains('active'));
+   const visible=[...document.querySelectorAll('.page')].filter(p=>!p.classList.contains('hidden'));
+   const chosen=active[0]||navButtons[0];
+   if(active.length!==1||visible.length!==1||!visible.includes($(chosen.dataset.page))){
+    navButtons.forEach(b=>b.classList.toggle('active',b===chosen));
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!==chosen.dataset.page));
+    repaired++;
+   }
+   add('Trạng thái hiển thị trang',true,repaired?'Đã đồng bộ lại tab đang chọn và trang hiển thị.':'Các tab đang hiển thị đúng.');
+  }else add('Trạng thái hiển thị trang',false,'Không tự sửa vì có liên kết trang không hợp lệ.');
+  // Kiểm tra thư viện và phiên đăng nhập.
+  const supabaseReady=!!(window.supabase&&db&&typeof db.from==='function');
+  add('Thư viện Supabase',supabaseReady,supabaseReady?'Thư viện đã khởi tạo.':'Không tải được thư viện Supabase; hãy kiểm tra mạng/CDN.');
+  let sessionOk=false;
+  try{
+   const {data,error}=await db.auth.getSession();
+   if(error) throw error;
+   sessionOk=!!data.session;
+   add('Phiên đăng nhập',sessionOk,sessionOk?'Đang có phiên đăng nhập.':'Chưa đăng nhập hoặc phiên đã hết hạn.');
+  }catch(e){add('Phiên đăng nhập',false,e.message||String(e));}
+  // Chỉ đọc 1 dòng để kiểm tra kết nối và quyền đọc, không ghi dữ liệu.
+  try{
+   await run(db.from('products').select('id').limit(1));
+   add('Kết nối dữ liệu sản phẩm',true,'Truy vấn chỉ đọc thành công.');
+  }catch(e){add('Kết nối dữ liệu sản phẩm',false,e.message||String(e));}
+  const runtime=adminRuntimeErrors.slice(-5);
+  add('Lỗi JavaScript ghi nhận',runtime.length===0,runtime.length?runtime.join(' | '):'Chưa ghi nhận lỗi JavaScript kể từ khi trang khởi động.');
+  const failed=results.filter(x=>!x.ok).length;
+  summary.textContent='Hoàn tất: '+results.length+' hạng mục, '+(results.length-failed)+' đạt, '+failed+' cần kiểm tra, '+repaired+' lỗi giao diện đã tự sửa.';
+  results.forEach(x=>{
+   const li=document.createElement('li');
+   li.style.margin='7px 0';
+   li.style.color=x.ok?'#80e5b0':'#ffb1b1';
+   li.textContent=(x.ok?'✓ ':'⚠ ')+x.label+': '+x.detail;
+   list.appendChild(li);
+  });
+ }catch(e){
+  summary.textContent='Không thể hoàn tất kiểm tra: '+(e.message||String(e));
+ }finally{
+  btn.disabled=false;
+  btn.textContent='Kiểm tra & sửa lỗi';
+ }
+};
 
 /* KHỞI ĐỘNG */
 checkSession();
