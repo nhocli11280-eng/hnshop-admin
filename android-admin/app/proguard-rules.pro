@@ -1,0 +1,2 @@
+-keep class vn.hnshop.admin.MainActivity { *; }
+-keepattributes *Annotation*
