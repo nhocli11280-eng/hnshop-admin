@@ -499,38 +499,31 @@ tr:hover td{background:rgba(0,145,220,.055)}
 </div>
 </section>
 <section id="sellMonitor" class="page hidden">
-<h2>Theo dõi hệ thống & khách mua key</h2>
-<div class="panel">
-<h3>Tổng quan kinh doanh</h3>
-<div class="stats" id="sellSummaryStats">
- <div class="stat">Tổng khách hàng<strong id="sellStatCustomers">—</strong></div>
- <div class="stat">Đơn hoàn tất<strong id="sellStatOrders">—</strong></div>
- <div class="stat">Tổng key đã bán<strong id="sellStatKeys">—</strong></div>
- <div class="stat">Tổng doanh thu buy key<strong id="sellStatRevenue">—</strong></div>
+<h2>Tổng quan</h2>
+<div class="actions" style="margin-bottom:14px">
+ <button id="refreshSellDashboard" class="secondary" type="button">Làm mới tổng quan</button>
+ <span id="sellDashboardUpdated" style="color:#9bc6df;font-size:13px;align-self:center" aria-live="polite">Đang tải số liệu...</span>
 </div>
-<p id="sellCustomerMessage" aria-live="polite"></p>
+<div class="stats">
+ <div class="stat">Tổng sản phẩm<strong id="sellStatProducts">—</strong></div>
+ <div class="stat">Sản phẩm đang bán<strong id="sellStatActiveProducts">—</strong></div>
+ <div class="stat">Danh mục<strong id="sellStatCategories">—</strong></div>
+ <div class="stat">Tổng đơn hàng<strong id="sellStatOrders">—</strong></div>
+ <div class="stat">Đơn chờ xử lý<strong id="sellStatPendingOrders">—</strong></div>
+ <div class="stat">Tổng giá trị đơn<strong id="sellStatRevenue">—</strong></div>
+ <div class="stat">Khách hàng<strong id="sellStatCustomers">—</strong></div>
+ <div class="stat">Key còn trong kho<strong id="sellStatAvailableKeys">—</strong></div>
+ <div class="stat">Key đã cấp<strong id="sellStatDeliveredKeys">—</strong></div>
+ <div class="stat">Đơn Shop<strong id="sellStatStoreOrders">—</strong></div>
 </div>
-<div class="panel">
-<h3>Thông tin khách hàng</h3>
-<button id="refreshSellCustomers" class="secondary">Làm mới danh sách</button>
-<div class="table-wrap"><table>
-<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th></tr></thead>
-<tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
-</table></div>
+<div class="panel" style="margin-top:18px">
+ <h3>Đơn hàng gần đây</h3>
+ <div class="table-wrap"><table>
+  <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+  <tbody id="sellRecentOrders"><tr><td colspan="5">Đang tải...</td></tr></tbody>
+ </table></div>
 </div>
-<div class="panel">
-<h3>Thống kê mua key theo khách hàng</h3>
-<div class="table-wrap"><table>
-<thead><tr><th>Tên tài khoản</th><th>Số đơn hoàn tất</th><th>Số key đã mua</th><th>Tổng tiền buy key</th></tr></thead>
-<tbody id="sellPurchaseRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
-</table></div>
-</div>
-<div class="panel">
-<h3>Lỗi hệ thống trên phiên làm việc này</h3>
-<p>Hiển thị lỗi JavaScript và tác vụ nền được ghi nhận trên trình duyệt đang đăng nhập.</p>
-<button id="refreshSellErrors" class="secondary">Làm mới lỗi</button>
-<ul id="sellErrorRows"><li>Chưa ghi nhận lỗi.</li></ul>
-</div>
+<p id="sellDashboardMessage" aria-live="polite" style="color:#9bc6df"></p>
 </section>
 <section id="branding" class="page hidden">
 <h2>Cài đặt cửa hàng</h2>
@@ -1808,16 +1801,63 @@ $('grantSellBtn').onclick=async()=>{
 $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage').textContent=e.message||String(e));
 
 /* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
-async let sellRealtimeChannel = null;
+async /* TỔNG QUAN SELL: CHỈ ĐỌC, KHÔNG CÓ THAO TÁC CHỈNH SỬA */
+async function loadSellMonitor(){
+ const ids=['sellStatProducts','sellStatActiveProducts','sellStatCategories','sellStatOrders','sellStatPendingOrders','sellStatRevenue','sellStatCustomers','sellStatAvailableKeys','sellStatDeliveredKeys','sellStatStoreOrders'];
+ ids.forEach(id=>{if($(id))$(id).textContent='…';});
+ $('sellRecentOrders').innerHTML='<tr><td colspan="5">Đang tải dữ liệu...</td></tr>';
+ $('sellDashboardMessage').textContent='Đang cập nhật các chỉ số...';
+ try{
+  const {data,error}=await db.rpc('sell_get_admin_dashboard_summary');
+  if(error) throw error;
+  const x=data||{};
+  $('sellStatProducts').textContent=Number(x.total_products||0).toLocaleString('vi-VN');
+  $('sellStatActiveProducts').textContent=Number(x.active_products||0).toLocaleString('vi-VN');
+  $('sellStatCategories').textContent=Number(x.total_categories||0).toLocaleString('vi-VN');
+  $('sellStatOrders').textContent=Number(x.total_orders||0).toLocaleString('vi-VN');
+  $('sellStatPendingOrders').textContent=Number(x.pending_orders||0).toLocaleString('vi-VN');
+  $('sellStatRevenue').textContent=money(x.total_revenue||0);
+  $('sellStatCustomers').textContent=Number(x.total_customers||0).toLocaleString('vi-VN');
+  $('sellStatAvailableKeys').textContent=Number(x.available_keys||0).toLocaleString('vi-VN');
+  $('sellStatDeliveredKeys').textContent=Number(x.delivered_keys||0).toLocaleString('vi-VN');
+  $('sellStatStoreOrders').textContent=Number(x.shop_orders||0).toLocaleString('vi-VN');
+  const recent=Array.isArray(x.recent_orders)?x.recent_orders:[];
+  $('sellRecentOrders').innerHTML=recent.length?recent.map(o=>'<tr>'+
+   '<td>#'+escapeHTML(o.source==='Shop'?'Shop · '+String(o.id||'').slice(0,8):String(o.id||'').slice(0,8))+'</td>'+
+   '<td>'+escapeHTML(o.customer_name||'—')+'</td>'+
+   '<td>'+money(o.total)+'</td>'+
+   '<td>'+escapeHTML(o.status||'—')+'</td>'+
+   '<td>'+date(o.created_at)+'</td></tr>'
+  ).join(''):'<tr><td colspan="5">Chưa có đơn hàng.</td></tr>';
+  $('sellDashboardUpdated').textContent='Cập nhật lúc '+new Date().toLocaleTimeString('vi-VN');
+  $('sellDashboardMessage').textContent='Dữ liệu chỉ xem. Tự đồng bộ khi có thay đổi hoặc tối đa mỗi 20 giây.';
+ }catch(e){
+  $('sellRecentOrders').innerHTML='<tr><td colspan="5">Không tải được dữ liệu tổng quan.</td></tr>';
+  $('sellDashboardMessage').textContent='Lỗi tải tổng quan: '+(e.message||String(e))+'. Cần chạy SQL sell_admin_dashboard_summary.sql trong Supabase.';
+  $('sellDashboardUpdated').textContent='Chưa cập nhật được';
+  console.error('Seller dashboard:',e);
+ }
+}
+$('refreshSellDashboard').onclick=()=>loadSellMonitor();
+
+let sellRealtimeChannel = null;
 let sellAutoRefreshTimer = null;
+let sellRefreshTimer = null;
 function subscribeSellRealtime(){
  if(sellRealtimeChannel) return;
- sellRealtimeChannel = db.channel('hnshop-sell-live')
+ sellRealtimeChannel=db.channel('hnshop-sell-dashboard-live')
+  .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleSellRefresh())
   .on('postgres_changes',{event:'*',schema:'public',table:'store_orders'},()=>scheduleSellRefresh())
   .on('postgres_changes',{event:'*',schema:'public',table:'shop_customer_access'},()=>scheduleSellRefresh())
-  .subscribe();
+  .on('postgres_changes',{event:'*',schema:'public',table:'products'},()=>scheduleSellRefresh())
+  .on('postgres_changes',{event:'*',schema:'public',table:'categories'},()=>scheduleSellRefresh())
+  .on('postgres_changes',{event:'*',schema:'public',table:'product_keys'},()=>scheduleSellRefresh())
+  .on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>scheduleSellRefresh())
+  .subscribe(status=>{
+   if(status==='SUBSCRIBED') $('sellDashboardUpdated').textContent='Đã kết nối cập nhật tức thì';
+   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') $('sellDashboardUpdated').textContent='Đang dùng tự đồng bộ dự phòng';
+  });
 }
-let sellRefreshTimer = null;
 function scheduleSellRefresh(){
  clearTimeout(sellRefreshTimer);
  sellRefreshTimer=setTimeout(()=>loadSellMonitor(),500);
@@ -1831,43 +1871,6 @@ function startSellAutoRefresh(){
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden && $('sellMonitor') && !$('sellMonitor').classList.contains('hidden')) loadSellMonitor();
 });
-
-function loadSellMonitor(){
- $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
- $('sellCustomerRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
- $('sellPurchaseRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
- $('sellStatCustomers').textContent='—';$('sellStatOrders').textContent='—';$('sellStatKeys').textContent='—';$('sellStatRevenue').textContent='—';
- try{
-  const [customerResult, totalsResult]=await Promise.all([
-   db.rpc('sell_list_shop_customer_summary'),
-   db.rpc('sell_get_shop_sales_totals')
-  ]);
-  if(customerResult.error) throw customerResult.error;
-  if(totalsResult.error) throw totalsResult.error;
-  const rows=Array.isArray(customerResult.data)?customerResult.data:[];
-  const totals=Array.isArray(totalsResult.data)?(totalsResult.data[0]||{}):{};
-  $('sellCustomerRows').innerHTML=rows.length?rows.map(x=>`<tr>
-   <td>${escapeHTML(x.username||'Khách hàng')}</td><td>${escapeHTML(x.email||'')}</td>
-   <td>${date(x.created_at)}</td><td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
-  </tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản khách hàng.</td></tr>';
-  $('sellPurchaseRows').innerHTML=rows.length?rows.map(x=>`<tr>
-   <td>${escapeHTML(x.username||'Khách hàng')}</td>
-   <td>${Number(x.total_orders||0).toLocaleString('vi-VN')}</td>
-   <td>${Number(x.total_keys||0).toLocaleString('vi-VN')}</td>
-   <td>${storeMoney(x.total_spent)}</td>
-  </tr>`).join(''):'<tr><td colspan="4">Chưa có dữ liệu mua key.</td></tr>';
-  $('sellCustomerMessage').textContent='Tổng đơn, key và doanh thu lấy trực tiếp từ tất cả đơn đã hoàn tất (fulfilled), kể cả đơn chưa khớp tài khoản khách.';
-  $('sellStatCustomers').textContent=rows.length.toLocaleString('vi-VN');
-  $('sellStatOrders').textContent=Number(totals.total_orders||0).toLocaleString('vi-VN');
-  $('sellStatKeys').textContent=Number(totals.total_keys||0).toLocaleString('vi-VN');
-  $('sellStatRevenue').textContent=storeMoney(totals.total_revenue||0);
- }catch(e){
-  $('sellCustomerRows').innerHTML='<tr><td colspan="4">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
-  $('sellCustomerMessage').textContent='Không tải được thống kê: '+(e.message||String(e))+'. Vui lòng kiểm tra hai hàm thống kê Seller trong Supabase.';
- }
-}
-$('refreshSellErrors').onclick=()=>{$('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi.</li>';};
-$('refreshSellCustomers').onclick=()=>loadSellMonitor();
 
 /* KIỂM TRA & KHẮC PHỤC AN TOÀN ADMIN */
 const adminRuntimeErrors=[];
