@@ -171,6 +171,17 @@ tr:hover td{background:rgba(0,145,220,.055)}
  .form-grid{grid-template-columns:minmax(0,1fr)}
  .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
  table{min-width:620px}
+ /* Đơn hàng: chuyển từng dòng thành thẻ trên điện thoại để nút thao tác luôn hiện */
+ #orders .table-wrap{overflow:visible}
+ #orders table{width:100%;min-width:0;table-layout:fixed}
+ #orders thead{display:none}
+ #orders tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px;padding:9px 0;border-bottom:1px solid rgba(90,167,208,.2)}
+ #orders tbody td{display:block;min-width:0;padding:7px 5px;border:0;overflow-wrap:anywhere}
+ #orders tbody td:nth-child(1){grid-column:1/-1;font-weight:700;color:#75dfff}
+ #orders tbody td:nth-child(6){grid-column:1/-1}
+ #orders tbody td:nth-child(6) .actions{display:flex;flex-wrap:wrap;gap:8px}
+ #orders tbody td:nth-child(6) button{flex:1 1 130px;min-height:44px;white-space:normal}
+ #orders #orderDetail{overflow-wrap:anywhere}
  .panel,.stat{box-shadow:0 5px 20px rgba(0,0,0,.22)}
 }
 @media(max-width:360px){
