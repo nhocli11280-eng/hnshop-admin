@@ -3,7 +3,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HNShop Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -142,11 +142,40 @@ tr:hover td{background:rgba(0,145,220,.055)}
 @keyframes adminHeaderBeam{0%{left:-45%}65%,100%{left:130%}}
 @keyframes adminGridFlow{from{background-position:0 0}to{background-position:190px 0}}
 @media(max-width:650px){
- body{background-attachment:scroll}
+ html,body{width:100%;max-width:100%;overflow-x:hidden;background-attachment:scroll}
  body::before{opacity:.10;animation:none}
- nav{border-right:0;border-bottom:1px solid var(--g-line);background:rgba(3,13,29,.97)}
- nav button{margin-bottom:0}
+ #app{width:100%;min-width:0}
+ header{padding:calc(10px + env(safe-area-inset-top)) 12px 10px;gap:10px;align-items:flex-start;flex-wrap:wrap}
+ header strong{font-size:16px;line-height:38px}
+ header>div{width:100%;display:flex;gap:7px;flex-wrap:wrap}
+ header>div button{flex:1 1 145px;min-height:42px;white-space:normal}
+ .layout{display:flex;flex-direction:column;min-height:0}
+ nav{
+  position:sticky;top:0;z-index:5;width:100%;max-width:100%;
+  display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  gap:7px;padding:9px 10px;
+  border-right:0;border-bottom:1px solid var(--g-line);
+  background:rgba(3,13,29,.98);-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+ }
+ nav button{flex:0 0 auto;width:auto;min-height:40px;margin:0;padding:9px 12px;white-space:nowrap}
+ main{width:100%;min-width:0;padding:12px 10px calc(18px + env(safe-area-inset-bottom))}
+ .page,.panel,.stats{min-width:0;max-width:100%}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat{min-width:0;padding:12px;font-size:13px;overflow-wrap:anywhere}
+ .stat strong{font-size:21px;overflow-wrap:anywhere}
+ .panel{padding:13px}
+ .actions{align-items:stretch}
+ .actions button{min-height:40px}
+ input,select,textarea{min-width:0;font-size:16px}
+ .form-grid{grid-template-columns:minmax(0,1fr)}
+ .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+ table{min-width:620px}
  .panel,.stat{box-shadow:0 5px 20px rgba(0,0,0,.22)}
+}
+@media(max-width:360px){
+ .stats{grid-template-columns:minmax(0,1fr)}
+ header>div button{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
