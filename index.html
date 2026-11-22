@@ -1541,16 +1541,18 @@ window.showStoreOrder = async id => {
    .eq('id',id).single());
   const items = await run(db.from('store_order_items')
    .select('product_name,package_name,quantity,price').eq('order_id',id));
-  $('storeOrderDetail').innerHTML =
-   '<h3>Chi tiết đơn hàng</h3>' +
+  $('orderDetail').innerHTML =
+   '<h3>Chi tiết đơn Shop</h3>' +
    '<p><b>Mã đơn:</b> ' + escapeHTML(order.id) + '</p>' +
    '<p><b>Tổng tiền:</b> ' + storeMoney(order.total) + '</p>' +
-   '<p><b>Nội dung chuyển khoản:</b> ' + escapeHTML(order.transfer_note) + '</p>' +
+   '<p><b>Nội dung chuyển khoản:</b> ' + escapeHTML(order.transfer_note || 'Không có') + '</p>' +
    '<p><b>Trạng thái:</b> ' + escapeHTML(order.status) + '</p>' +
    '<p><b>Ngày tạo:</b> ' + date(order.created_at) + '</p>' +
+   '<p><b>Ngày thanh toán:</b> ' + (order.paid_at ? date(order.paid_at) : 'Chưa thanh toán') + '</p>' +
    '<h4>Sản phẩm</h4>' +
    (items.map(x => '<p>' + escapeHTML(x.product_name) + ' — ' + escapeHTML(x.package_name || 'Gói key') + ' × ' +
     escapeHTML(x.quantity) + ' — ' + storeMoney(x.price) + '</p>').join('') || 'Không có sản phẩm');
+  $('orderDetail').scrollIntoView({behavior:'smooth',block:'start'});
  } catch(e) {
   $('storeOrderDetail').textContent = 'Lỗi: ' + (e.message || e);
  }
@@ -1561,11 +1563,12 @@ window.confirmStoreOrder = async id => {
   const {data,error} = await db.rpc('confirm_store_payment',{p_order_id:id});
   if(error) throw error;
   if(data !== true) throw Error('Máy chủ chưa xác nhận hoàn tất cấp key.');
-  $('storeOrderMessage').textContent = 'Đã xác nhận thanh toán và cấp key thành công.';
+  message('Đã xác nhận thanh toán và cấp key thành công.');
   await loadOrders();
   await showStoreOrder(id);
+  await loadDashboard();
  } catch(e) {
-  $('storeOrderMessage').textContent = 'Không thể xác nhận: ' + (e.message || e);
+  fail(e);
  }
 };
 $('refreshStoreOrders').onclick = loadStoreOrders;
