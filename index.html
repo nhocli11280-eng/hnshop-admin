@@ -679,6 +679,7 @@ async function verifyAdmin() {
   $('sellStaffNav').classList.remove('hidden');
   await loadDashboard();
   subscribeAdminRealtime();
+  startDashboardAutoRefresh();
  }
 }
 
@@ -823,6 +824,10 @@ function subscribeAdminRealtime() {
   .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleAdminRealtimeRefresh('orders'))
   .on('postgres_changes',{event:'*',schema:'public',table:'store_orders'},()=>scheduleAdminRealtimeRefresh('store_orders'))
   .on('postgres_changes',{event:'*',schema:'public',table:'shop_customer_access'},()=>scheduleAdminRealtimeRefresh('shop_customer_access'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'products'},()=>scheduleAdminRealtimeRefresh('products'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'categories'},()=>scheduleAdminRealtimeRefresh('categories'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'product_keys'},()=>scheduleAdminRealtimeRefresh('product_keys'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>scheduleAdminRealtimeRefresh('customers'))
   .subscribe((status)=>{
    if(status==='SUBSCRIBED') {
     $('dashboardUpdated').textContent='Đang kết nối cập nhật tức thì';
@@ -831,6 +836,22 @@ function subscribeAdminRealtime() {
    }
   });
 }
+let dashboardAutoRefreshTimer = null;
+function startDashboardAutoRefresh() {
+ if(dashboardAutoRefreshTimer) return;
+ dashboardAutoRefreshTimer = setInterval(async()=>{
+  const dashboard=$('dashboard');
+  if(!dashboard || dashboard.classList.contains('hidden') || document.hidden) return;
+  try {
+   await loadDashboard();
+   $('dashboardUpdated').textContent='Tự đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN');
+  } catch(e) { console.error('Dashboard auto refresh:',e); }
+ },20000);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden && $('dashboard') && !$('dashboard').classList.contains('hidden')) loadDashboard().catch(e=>console.error(e));
+});
+
 function scheduleAdminRealtimeRefresh(table) {
  clearTimeout(adminRealtimeRefreshTimer);
  adminRealtimeRefreshTimer=setTimeout(async()=>{
