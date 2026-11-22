@@ -218,6 +218,8 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="keys">Kho key</button>
 <button data-page="payment">Cài đặt thanh toán</button>
 <button data-page="branding">Cài đặt cửa hàng</button>
+<button data-page="sellStaff" id="sellStaffNav">Quản lý Sellkey</button>
+<button data-page="sellMonitor" id="sellMonitorNav" class="hidden">Theo dõi hệ thống & khách mua key</button>
 </nav>
 
 <main>
@@ -401,6 +403,38 @@ tr:hover td{background:rgba(0,145,220,.055)}
 </div>
 </section>
 
+<section id="sellStaff" class="page hidden">
+<h2>Quản lý tài khoản Sellkey</h2>
+<div class="panel">
+<p>Chỉ cấp quyền cho email đã đăng ký tài khoản trong Supabase Authentication. Thu hồi quyền sẽ vô hiệu hóa đăng nhập Sellkey nhưng không xóa lịch sử mua hàng.</p>
+<label>Email tài khoản đã đăng ký</label>
+<input id="sellStaffEmail" type="email" placeholder="sell@example.com">
+<div class="actions"><button id="grantSellBtn">Cấp quyền Sellkey</button><button class="secondary" id="refreshSellStaff">Làm mới danh sách</button></div>
+<p id="sellStaffMessage" aria-live="polite"></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Email</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<tbody id="sellStaffRows"><tr><td colspan="3">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+</section>
+<section id="sellMonitor" class="page hidden">
+<h2>Theo dõi hệ thống & khách mua key</h2>
+<div class="panel">
+<h3>Lỗi hệ thống trên phiên làm việc này</h3>
+<p>Hiển thị lỗi JavaScript và tác vụ nền được ghi nhận trên trình duyệt đang đăng nhập.</p>
+<button id="refreshSellErrors" class="secondary">Làm mới lỗi</button>
+<ul id="sellErrorRows"><li>Chưa ghi nhận lỗi.</li></ul>
+</div>
+<div class="panel">
+<h3>Khách hàng đã mua key</h3>
+<button id="refreshSellCustomers" class="secondary">Làm mới danh sách</button>
+<div class="table-wrap"><table>
+<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th></tr></thead>
+<tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
+</table></div>
+<p id="sellCustomerMessage" aria-live="polite"></p>
+</div>
+</section>
 <section id="branding" class="page hidden">
 <h2>Cài đặt cửa hàng</h2>
 <div class="panel">
@@ -522,9 +556,10 @@ async function verifyAdmin() {
   return;
  }
 
- if(data.user.app_metadata?.role !== 'admin') {
+ const role = data.user.app_metadata?.role;
+ if(!['admin','sell'].includes(role)) {
   await db.auth.signOut();
-  $('loginMsg').textContent = 'Tài khoản không có quyền Admin.';
+  $('loginMsg').textContent = 'Tài khoản chưa được cấp quyền Admin hoặc Sellkey.';
   $('login').style.display = 'block';
   $('app').style.display = 'none';
   return;
@@ -532,7 +567,21 @@ async function verifyAdmin() {
 
  $('login').style.display = 'none';
  $('app').style.display = 'block';
- await loadDashboard();
+ if(role === 'sell') {
+  document.querySelectorAll('nav button').forEach(btn => btn.classList.add('hidden'));
+  $('sellMonitorNav').classList.remove('hidden');
+  $('sellMonitorNav').classList.add('active');
+  document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+  $('sellMonitor').classList.remove('hidden');
+  $('adminDiagnosticsBtn').textContent = 'Kiểm tra lỗi hệ thống';
+  await loadSellMonitor();
+ } else {
+  document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('hidden'));
+  $('sellMonitorNav').classList.add('hidden');
+  $('sellMonitor').classList.add('hidden');
+  $('sellStaffNav').classList.remove('hidden');
+  await loadDashboard();
+ }
 }
 
 $('loginBtn').onclick = async () => {
@@ -588,6 +637,8 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
    if(btn.dataset.page === 'payment') await loadPaymentSettings();
    if(btn.dataset.page === 'branding') await loadShopBrand();
+   if(btn.dataset.page === 'sellStaff') await loadSellStaff();
+   if(btn.dataset.page === 'sellMonitor') await loadSellMonitor();
   } catch(e) {
    fail(e);
   }
@@ -1505,6 +1556,65 @@ window.toggleShopCustomer=async(userId,blocked)=>{
  } catch(e){fail(e);}
 };
 $('refreshCustomerAccess').onclick=()=>loadCustomerAccess().catch(fail);
+
+/* QUẢN LÝ NHÂN VIÊN SELLKEY */
+async function loadSellStaff() {
+ $('sellStaffRows').innerHTML='<tr><td colspan="3">Đang tải...</td></tr>';
+ const {data,error}=await db.rpc('admin_list_sell_staff');
+ if(error) throw error;
+ const rows=Array.isArray(data)?data:[];
+ $('sellStaffRows').innerHTML=rows.length?rows.map(x=>`<tr>
+  <td>${escapeHTML(x.email)}</td><td>${x.active?'Đang hoạt động':'Đã bị vô hiệu hóa'}</td>
+  <td><div class="actions">${x.active
+   ? `<button class="danger" onclick="setSellRole('${escapeHTML(x.email)}',false)">Kích khỏi Admin</button>`
+   : `<button onclick="setSellRole('${escapeHTML(x.email)}',true)">Cấp lại quyền</button>`}
+  </div></td></tr>`).join(''):'<tr><td colspan="3">Chưa có tài khoản Sellkey.</td></tr>';
+}
+window.setSellRole=async(email,enabled)=>{
+ const action=enabled?'cấp lại quyền Sellkey cho':'vô hiệu hóa tài khoản Sellkey của';
+ if(!confirm('Bạn có chắc muốn '+action+' '+email+'?')) return;
+ try{
+  const {data,error}=await db.rpc('admin_set_sell_role',{p_email:email,p_enabled:enabled});
+  if(error) throw error;
+  if(data!==true) throw Error('Không tìm thấy tài khoản hoặc tài khoản không thể thay đổi quyền.');
+  $('sellStaffMessage').textContent=enabled?'Đã cấp lại quyền Sellkey.':'Đã vô hiệu hóa tài khoản Sellkey.';
+  await loadSellStaff();
+ }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
+};
+$('grantSellBtn').onclick=async()=>{
+ const email=$('sellStaffEmail').value.trim();
+ if(!email) { $('sellStaffMessage').textContent='Nhập email tài khoản đã đăng ký.'; return; }
+ try{
+  const {data,error}=await db.rpc('admin_set_sell_role',{p_email:email,p_enabled:true});
+  if(error) throw error;
+  if(data!==true) throw Error('Không tìm thấy email. Hãy tạo tài khoản trong Supabase Authentication trước.');
+  $('sellStaffMessage').textContent='Đã cấp quyền Sellkey cho '+email;
+  $('sellStaffEmail').value='';
+  await loadSellStaff();
+ }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
+};
+$('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage').textContent=e.message||String(e));
+
+/* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
+async function loadSellMonitor(){
+ $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
+ $('sellCustomerRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
+ try{
+  const {data,error}=await db.rpc('admin_list_shop_customers');
+  if(error) throw error;
+  const rows=Array.isArray(data)?data:[];
+  $('sellCustomerRows').innerHTML=rows.length?rows.map(x=>`<tr>
+   <td>${escapeHTML(x.username||'Khách hàng')}</td><td>${escapeHTML(x.email||'')}</td>
+   <td>${date(x.created_at)}</td><td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
+  </tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản khách hàng.</td></tr>';
+  $('sellCustomerMessage').textContent='Đang hiển thị '+rows.length+' tài khoản khách.';
+ }catch(e){
+  $('sellCustomerRows').innerHTML='<tr><td colspan="4">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
+  $('sellCustomerMessage').textContent='Nếu RPC hiện tại chỉ cho Admin, cần mở quyền đọc giới hạn cho Sellkey trong Supabase.';
+ }
+}
+$('refreshSellErrors').onclick=()=>{$('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi.</li>';};
+$('refreshSellCustomers').onclick=()=>loadSellMonitor();
 
 /* KIỂM TRA & KHẮC PHỤC AN TOÀN ADMIN */
 const adminRuntimeErrors=[];
