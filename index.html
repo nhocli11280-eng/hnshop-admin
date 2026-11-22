@@ -1019,40 +1019,40 @@ $('cancelBanner').onclick = clearBanner;
 
 /* ĐƠN HÀNG */
 async function loadOrders() {
- const rows = await run(
-  db.from('orders')
-   .select('id,customer_id,total,status,note,created_at')
-   .order('created_at', {ascending:false})
- );
+  const body = $('orderRows');
+  body.innerHTML = '<tr><td colspan="6">Đang tải đơn hàng...</td></tr>';
+  try {
+    // Đọc trực tiếp dữ liệu đơn hàng; không phụ thuộc truy vấn bảng customers
+    // vì lỗi quyền/cấu trúc bảng khách hàng có thể làm trống toàn bộ danh sách.
+    const rows = await run(
+      db.from('orders').select('*').order('created_at', {ascending:false})
+    );
 
- const ids = [...new Set(rows.map(x => x.customer_id).filter(Boolean))];
- let people = [];
-
- if(ids.length) {
-  people = await run(
-   db.from('customers').select('id,name,phone').in('id', ids)
-  );
- }
-
- $('orderRows').innerHTML = rows.length
-  ? rows.map(x => {
-   const c = people.find(p => String(p.id) === String(x.customer_id));
-
-   return `
-    <tr>
-     <td>#${escapeHTML(x.id)}</td>
-     <td>${escapeHTML(c?.name || '')}</td>
-     <td>${money(x.total)}</td>
-     <td>${escapeHTML(x.status || '')}</td>
-     <td>${date(x.created_at)}</td>
-     <td><div class="actions">
-      <button onclick="showOrder('${escapeHTML(x.id)}')">Chi tiết</button>
-      <button onclick="changeStatus('${escapeHTML(x.id)}')">Đổi trạng thái</button>
-     </div></td>
-    </tr>
-   `;
-  }).join('')
-  : '<tr><td colspan="6">Chưa có đơn hàng</td></tr>';
+    body.innerHTML = rows.length
+      ? rows.map(x => {
+        const customer = x.customer_name || x.name || x.email || x.customer_email ||
+          x.phone || x.customer_phone || x.customer_id || 'Khách hàng';
+        return `
+          <tr>
+            <td>#${escapeHTML(x.id)}</td>
+            <td>${escapeHTML(customer)}</td>
+            <td>${money(x.total ?? x.total_amount ?? x.amount)}</td>
+            <td>${escapeHTML(x.status || '')}</td>
+            <td>${date(x.created_at)}</td>
+            <td><div class="actions">
+              <button onclick="showOrder('${escapeHTML(x.id)}')">Chi tiết</button>
+              <button onclick="changeStatus('${escapeHTML(x.id)}')">Đổi trạng thái</button>
+            </div></td>
+          </tr>
+        `;
+      }).join('')
+      : '<tr><td colspan="6">Chưa có đơn hàng trong bảng orders. Đơn mua key trên Shop nằm ở mục “Đơn hàng cửa hàng”.</td></tr>';
+  } catch(e) {
+    console.error('loadOrders error:', e);
+    body.innerHTML = '<tr><td colspan="6">Không tải được đơn hàng: ' +
+      escapeHTML(e.message || String(e)) + '</td></tr>';
+    throw e;
+  }
 }
 
 window.showOrder = async id => {
