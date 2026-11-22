@@ -362,7 +362,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div><label>Tên sản phẩm</label><input id="pName"></div>
 <div><label>Giá</label><input id="pPrice" type="number" min="0" step="any"></div>
 <div><label>Danh mục</label><select id="pCategory"></select></div>
-<div><label>Ảnh sản phẩm</label><input id="pImage" type="file" accept="image/*"></div>
+<div><label for="pImage">Ảnh sản phẩm</label><input id="pImage" type="file" accept="image/*" style="display:block;width:100%;min-height:48px;padding:10px;cursor:pointer" aria-label="Chọn ảnh sản phẩm"><button type="button" id="chooseProductImage" class="secondary" style="margin-top:8px;min-height:44px;width:100%">Chọn ảnh từ điện thoại</button><small id="pImageName" style="display:block;margin-top:6px;color:#9bc6df">Chưa chọn ảnh</small></div>
 </div>
 <label>Mô tả ngắn</label>
 <textarea id="pDescription"></textarea>
@@ -993,6 +993,16 @@ $('cancelCategory').onclick = () => {
  $('categoryName').value = '';
  $('categorySlug').value = '';
 };
+
+/* NÚT CHỌN ẢNH TƯƠNG THÍCH ANDROID */
+$('chooseProductImage').addEventListener('click', () => {
+ const picker = $('pImage');
+ if (picker) picker.click();
+});
+$('pImage').addEventListener('change', () => {
+ const file = $('pImage').files && $('pImage').files[0];
+ $('pImageName').textContent = file ? file.name : 'Chưa chọn ảnh';
+});
 
 /* TẢI ẢNH */
 async function uploadImage(file) {
