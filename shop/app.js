@@ -560,37 +560,34 @@ document.getElementById("submitTopup").addEventListener("click",async()=>{
  finally{btn.disabled=false;}
 });
 
+function renderGameConfigForActive(){
+ const cfg=shopGameConfig||{},isWheel=activeGame==='wheel';
+ const prizes=Array.isArray(isWheel?cfg.wheel_prizes:cfg.blindbox_prizes)?(isWheel?cfg.wheel_prizes:cfg.blindbox_prizes):(cfg.prizes||[]);
+ const cost=Number(isWheel?cfg.wheel_cost:cfg.blindbox_cost)||15000;
+ const wheel=document.getElementById("prizeWheel");
+ if(wheel&&prizes.length){
+  wheel.innerHTML=prizes.map(p=>"<span>"+safe(p.label)+"<br>"+(Number(p.weight)/100)+"%</span>").join("");
+  const colors=["#153b68","#0b6f83","#6845a0","#a34b73","#287a66","#9b6a2d"];
+  let acc=0;const parts=prizes.map((p,i)=>{const from=acc/100;acc+=Number(p.weight);return colors[i%colors.length]+" "+from+"% "+(acc/100)+"%";});
+  wheel.style.background="conic-gradient("+parts.join(",")+")";
+ }
+ const odds=document.querySelector(".game-odds");
+ if(odds&&prizes.length)odds.textContent="Phần thưởng có thể nhận: "+prizes.filter(p=>Number(p.weight)>0).map(p=>p.label+" "+(Number(p.weight)/100)+"%").join(" · ");
+ const play=document.getElementById("gamePlay");
+ if(play)play.textContent=(isWheel?"QUAY":"MỞ TÚI")+" • "+moneyVND(cost);
+ const desc=document.getElementById("gameResult");
+ if(desc)desc.textContent="Mỗi "+(isWheel?"lượt quay":"lần mở túi")+" trừ "+moneyVND(cost)+" từ ví. Kết quả do hệ thống xác định.";
+}
 async function loadShopGameConfig(){
  try{
-  const {data,error}=await db.rpc("shop_get_game_config");
-  if(error)throw error;
+  const {data,error}=await db.rpc("shop_get_game_config");if(error)throw error;
   shopGameConfig=typeof data==="string"?JSON.parse(data):data;
-  const prizes=Array.isArray(shopGameConfig?.prizes)?shopGameConfig.prizes:[];
-  const wheel=document.getElementById("prizeWheel");
-  if(wheel&&prizes.length){
-   wheel.innerHTML=prizes.map(p=>"<span>"+safe(p.label)+"<br>"+(Number(p.weight)/100)+"%</span>").join("");
-   const colors=["#153b68","#0b6f83","#6845a0","#a34b73","#287a66","#9b6a2d"];
-   let acc=0;const parts=prizes.map((p,i)=>{const from=acc/100;acc+=Number(p.weight);return colors[i%colors.length]+" "+from+"% "+(acc/100)+"%";});
-   if(!shopGameConfig.wheel_image_url)wheel.style.background="conic-gradient("+parts.join(",")+")";
-  }
+  renderGameConfigForActive();
   const wheelUrl=shopGameConfig?.wheel_image_url||"";
-  const wheelCard=document.querySelector(".wheel-art");
-  const wheelStage=document.getElementById("wheelStage");
-  if(wheelUrl){
-   if(wheelCard){wheelCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(wheelUrl)+")";wheelCard.style.backgroundSize="cover";wheelCard.style.backgroundPosition="center";}
-   if(wheelStage){wheelStage.style.backgroundImage="url("+JSON.stringify(wheelUrl)+")";wheelStage.classList.add("has-outer-image");}
-  }else{
-   if(wheelCard)wheelCard.style.backgroundImage="";
-   if(wheelStage){wheelStage.style.backgroundImage="";wheelStage.classList.remove("has-outer-image");}
-  }
-  if(shopGameConfig?.blindbox_image_url){
-   const box=document.querySelector(".blindbox-large");
-   const blindCard=document.querySelector(".blind-art");
-   if(box){box.style.backgroundImage="url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";box.classList.add("has-custom-image");}
-   if(blindCard){blindCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";blindCard.style.backgroundSize="cover";blindCard.style.backgroundPosition="center";}
-  }
-  const odds=document.querySelector(".game-odds");
-  if(odds&&prizes.length)odds.textContent="Tỷ lệ: "+prizes.map(p=>p.label+" "+(Number(p.weight)/100)+"%").join(" · ");
+  const wheelCard=document.querySelector(".wheel-art"),wheelStage=document.getElementById("wheelStage");
+  if(wheelUrl){if(wheelCard){wheelCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(wheelUrl)+")";wheelCard.style.backgroundSize="cover";wheelCard.style.backgroundPosition="center";}if(wheelStage){wheelStage.style.backgroundImage="url("+JSON.stringify(wheelUrl)+")";wheelStage.classList.add("has-outer-image");}}
+  else{if(wheelCard)wheelCard.style.backgroundImage="";if(wheelStage){wheelStage.style.backgroundImage="";wheelStage.classList.remove("has-outer-image");}}
+  if(shopGameConfig?.blindbox_image_url){const box=document.querySelector(".blindbox-large"),blindCard=document.querySelector(".blind-art");if(box){box.style.backgroundImage="url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";box.classList.add("has-custom-image");}if(blindCard){blindCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";blindCard.style.backgroundSize="cover";blindCard.style.backgroundPosition="center";}}
  }catch(e){console.warn("Không tải được cấu hình trò chơi",e);}
 }
 
@@ -601,7 +598,7 @@ function openGame(type){
  document.getElementById("wheelStage").hidden=activeGame!=="wheel";
  document.getElementById("blindStage").hidden=activeGame!=="blindbox";
  document.getElementById("gamePlay").textContent=activeGame==="wheel"?"QUAY • 15.000 đ":"MỞ TÚI • 15.000 đ";
- document.getElementById("gameResult").textContent="Mỗi lượt 15.000 đ. Kết quả được hệ thống xác định.";
+ renderGameConfigForActive();
  document.getElementById("prizeWheel").style.transform="rotate(0deg)";
  document.getElementById("blindStage").querySelector(".blindbox-large").classList.remove("opening");
  gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
