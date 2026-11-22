@@ -182,7 +182,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="orders">Đơn hàng</button>
 <button data-page="customers">Khách hàng</button>
 <button data-page="customerAccess">Khóa tài khoản</button>
-<button data-page="storeOrders">Đơn hàng cửa hàng</button>
+
 <button data-page="keys">Kho key</button>
 <button data-page="payment">Cài đặt thanh toán</button>
 <button data-page="branding">Cài đặt cửa hàng</button>
@@ -298,6 +298,18 @@ tr:hover td{background:rgba(0,145,220,.055)}
 </table>
 </div>
 <div class="panel" id="orderDetail"></div>
+<div class="panel" id="storeOrdersPanel">
+<h3>Đơn mua key trên Shop</h3>
+<div class="panel">
+<button id="refreshStoreOrders" class="secondary">Làm mới đơn hàng</button>
+<p id="storeOrderMessage" aria-live="polite"></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mã đơn</th><th>Tổng tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+<tbody id="storeOrderRows"><tr><td colspan="6">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+<div class="panel" id="storeOrderDetail">Chọn một đơn để xem chi tiết.</div>
+</div>
 </section>
 
 <section id="customers" class="page hidden">
@@ -308,23 +320,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <tbody id="customerRows"></tbody>
 </table>
 </div>
-</section>
-
-
-
-<section id="customerAccess" class="page hidden">
-<h2>Quản lý quyền truy cập khách hàng</h2>
-<div class="panel">
-<p>Khóa tài khoản sẽ khiến khách bị đăng xuất khỏi shop và không thể tiếp tục mua key.</p>
-<button id="refreshCustomerAccess" class="secondary">Làm mới danh sách</button>
-<div class="table-wrap"><table>
-<thead><tr><th>Tài khoản</th><th>Email</th><th>Ngày ghi nhận</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-<tbody id="customerAccessRows"><tr><td colspan="5">Nhấn Làm mới danh sách.</td></tr></tbody>
-</table></div>
-</div>
-</section>
-
-<section id="storeOrders" class="page hidden">
+</sectition id="storeOrders" class="page hidden">
 <h2>Đơn hàng cửa hàng</h2>
 <div class="panel">
 <button id="refreshStoreOrders" class="secondary">Làm mới đơn hàng</button>
@@ -527,7 +523,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'products') await loadProducts();
    if(btn.dataset.page === 'categories') await loadCategories();
    if(btn.dataset.page === 'banners') await loadBanners();
-   if(btn.dataset.page === 'orders') await loadOrders();
+   if(btn.dataset.page === 'orders') { await loadOrders(); await loadStoreOrders(); }
    if(btn.dataset.page === 'customers') await loadCustomers();
    if(btn.dataset.page === 'customerAccess') await loadCustomerAccess();
    if(btn.dataset.page === 'keys') await loadKeyProducts();
