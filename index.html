@@ -1717,9 +1717,14 @@ async function loadSellMonitor(){
  $('sellPurchaseRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
  $('sellStatCustomers').textContent='—';$('sellStatOrders').textContent='—';$('sellStatKeys').textContent='—';$('sellStatRevenue').textContent='—';
  try{
-  const {data,error}=await db.rpc('sell_list_shop_customer_summary');
-  if(error) throw error;
-  const rows=Array.isArray(data)?data:[];
+  const [customerResult, totalsResult]=await Promise.all([
+   db.rpc('sell_list_shop_customer_summary'),
+   db.rpc('sell_get_shop_sales_totals')
+  ]);
+  if(customerResult.error) throw customerResult.error;
+  if(totalsResult.error) throw totalsResult.error;
+  const rows=Array.isArray(customerResult.data)?customerResult.data:[];
+  const totals=Array.isArray(totalsResult.data)?(totalsResult.data[0]||{}):{};
   $('sellCustomerRows').innerHTML=rows.length?rows.map(x=>`<tr>
    <td>${escapeHTML(x.username||'Khách hàng')}</td><td>${escapeHTML(x.email||'')}</td>
    <td>${date(x.created_at)}</td><td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
@@ -1730,15 +1735,14 @@ async function loadSellMonitor(){
    <td>${Number(x.total_keys||0).toLocaleString('vi-VN')}</td>
    <td>${storeMoney(x.total_spent)}</td>
   </tr>`).join(''):'<tr><td colspan="4">Chưa có dữ liệu mua key.</td></tr>';
-  const totals=rows.reduce((a,x)=>({orders:a.orders+Number(x.total_orders||0),keys:a.keys+Number(x.total_keys||0),money:a.money+Number(x.total_spent||0)}),{orders:0,keys:0,money:0});
-  $('sellCustomerMessage').textContent='Thống kê chỉ tính các đơn đã hoàn tất (fulfilled).';
+  $('sellCustomerMessage').textContent='Tổng đơn, key và doanh thu lấy trực tiếp từ tất cả đơn đã hoàn tất (fulfilled), kể cả đơn chưa khớp tài khoản khách.';
   $('sellStatCustomers').textContent=rows.length.toLocaleString('vi-VN');
-  $('sellStatOrders').textContent=totals.orders.toLocaleString('vi-VN');
-  $('sellStatKeys').textContent=totals.keys.toLocaleString('vi-VN');
-  $('sellStatRevenue').textContent=storeMoney(totals.money);
+  $('sellStatOrders').textContent=Number(totals.total_orders||0).toLocaleString('vi-VN');
+  $('sellStatKeys').textContent=Number(totals.total_keys||0).toLocaleString('vi-VN');
+  $('sellStatRevenue').textContent=storeMoney(totals.total_revenue||0);
  }catch(e){
-  $('sellCustomerRows').innerHTML='<tr><td colspan="7">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
-  $('sellCustomerMessage').textContent='Danh sách thống kê chưa tải được. Vui lòng kiểm tra hàm sell_list_shop_customer_summary trong Supabase.';
+  $('sellCustomerRows').innerHTML='<tr><td colspan="4">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
+  $('sellCustomerMessage').textContent='Không tải được thống kê: '+(e.message||String(e))+'. Vui lòng kiểm tra hai hàm thống kê Seller trong Supabase.';
  }
 }
 $('refreshSellErrors').onclick=()=>{$('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi.</li>';};
