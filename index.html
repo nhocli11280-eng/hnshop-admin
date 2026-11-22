@@ -365,6 +365,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div><label>Giá</label><input id="pPrice" type="number" min="0" step="any"></div>
 <div><label>Danh mục</label><select id="pCategory"></select></div>
 <div><label for="pImage">Ảnh sản phẩm</label><input id="pImage" name="product_image" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" style="display:block;width:100%;min-height:52px;padding:10px;cursor:pointer;touch-action:manipulation" aria-label="Chọn ảnh sản phẩm"><label for="pImage" class="secondary" style="display:flex;align-items:center;justify-content:center;margin-top:8px;min-height:48px;width:100%;border-radius:8px;cursor:pointer;touch-action:manipulation">Chạm để chọn ảnh từ điện thoại</label><small id="pImageName" style="display:block;margin-top:6px;color:#9bc6df">Chưa chọn ảnh</small></div>
+<div><label for="pLogo">Logo sản phẩm (hiển thị trên thẻ sản phẩm Shop)</label><input id="pLogo" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" style="display:block;width:100%;min-height:52px;padding:10px"><small id="pLogoName" style="display:block;margin-top:6px;color:#9bc6df">Chưa chọn logo</small><img id="pLogoPreview" alt="Xem trước logo" style="display:none;max-width:100px;max-height:80px;object-fit:contain;margin-top:8px;background:#17212b;padding:6px;border-radius:8px"></div>
 </div>
 <label>Mô tả ngắn</label>
 <textarea id="pDescription"></textarea>
@@ -1054,6 +1055,9 @@ async function uploadImage(file) {
  return result.data.publicUrl;
 }
 
+/* LOGO SẢN PHẨM */
+$('pLogo').addEventListener('change',()=>{const f=$('pLogo').files&&$('pLogo').files[0];$('pLogoName').textContent=f?f.name:'Chưa chọn logo';if(f){$('pLogoPreview').src=URL.createObjectURL(f);$('pLogoPreview').style.display='block';}});
+
 /* SẢN PHẨM */
 async function loadProducts() {
  await loadCategories();
@@ -1166,12 +1170,14 @@ $('saveProduct').onclick = async () => {
   if(id && !old) throw Error('Không tìm thấy sản phẩm cần sửa. Hãy tải lại danh sách.');
   const file = $('pImage').files && $('pImage').files[0];
   const image = await uploadImage(file);
+  const logoFile = $('pLogo').files && $('pLogo').files[0];
+  const logo = await uploadImage(logoFile);
   const priceText = $('pPrice').value.trim();
   const row = {
    name:$('pName').value.trim(), price:Number(priceText),
    category_id:$('pCategory').value || null,
    description:$('pDescription').value.trim(), detail:$('pDetail').value.trim(),
-   image_url:image || old?.image_url || null, is_active:$('pActive').checked
+   image_url:image || old?.image_url || null, logo_url:logo || old?.logo_url || null, is_active:$('pActive').checked
   };
   if(!row.name) throw Error('Nhập tên sản phẩm');
   if(priceText==='' || !Number.isFinite(row.price) || row.price<0) throw Error('Giá sản phẩm không hợp lệ');
@@ -1191,7 +1197,7 @@ window.editProduct = id => {
  $('productId').value=x.id; $('pName').value=x.name||'';
  $('pPrice').value=x.price??''; $('pCategory').value=x.category_id||'';
  $('pDescription').value=x.description||''; $('pDetail').value=x.detail||'';
- $('pActive').checked=x.is_active!==false; $('pImage').value='';
+ $('pActive').checked=x.is_active!==false; $('pImage').value=''; $('pLogo').value=''; $('pLogoName').textContent=x.logo_url?'Giữ logo hiện tại nếu không chọn logo mới':'Chưa có logo'; $('pLogoPreview').src=x.logo_url||''; $('pLogoPreview').style.display=x.logo_url?'block':'none';
  $('pImageName').textContent='Giữ ảnh hiện tại nếu không chọn ảnh mới';
  $('productFormTitle').textContent='Sửa sản phẩm';
  window.scrollTo({top:0,behavior:'smooth'});
@@ -1225,11 +1231,12 @@ window.deleteProduct = async id => {
 };
 
 function clearProduct() {
- ['productId','pName','pPrice','pDescription','pDetail','pImage']
+ ['productId','pName','pPrice','pDescription','pDetail','pImage','pLogo']
   .forEach(id => $(id).value = '');
 
  $('pCategory').value = '';
  $('pActive').checked = true;
+ $('pLogoName').textContent='Chưa chọn logo'; $('pLogoPreview').removeAttribute('src'); $('pLogoPreview').style.display='none';
  $('productFormTitle').textContent = 'Thêm sản phẩm';
 }
 
