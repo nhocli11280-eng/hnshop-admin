@@ -54,6 +54,7 @@
       <div class="product-grid" id="productGrid" aria-live="polite"></div>
       <div class="empty-state" id="emptyState" hidden><span>⌕</span><strong>Không tìm thấy sản phẩm</strong><p>Thử từ khóa khác hoặc chọn danh mục Tất cả.</p></div>
     </section>
+    <section class="games-panel" id="games"><div class="section-heading"><div><span class="eyebrow">THỬ VẬN MAY</span><h2>Vòng quay &amp; túi mù</h2></div><span class="product-count">PHẦN THƯỞNG NGẪU NHIÊN</span></div><div class="games-grid"><article class="game-card"><div class="game-art wheel-art"><div class="mini-wheel">✦</div><span class="game-ribbon">VÒNG QUAY</span></div><div class="game-info"><h3>Key Chấp Tố Menu Tím</h3><p>Thử vận may nhận key hoặc tiền vào ví</p><strong>15.000 đ / lượt</strong><button class="game-join" type="button" data-game="wheel">Tham gia <span>→</span></button></div></article><article class="game-card"><div class="game-art blind-art"><div class="blind-gift">?</div><span class="game-ribbon">TÚI MÙ</span></div><div class="game-info"><h3>Túi mù HNShop</h3><p>Mở túi bí ẩn, nhận key hoặc tiền vào ví</p><strong>15.000 đ / lượt</strong><button class="game-join" type="button" data-game="blindbox">Mở túi <span>→</span></button></div></article></div></section>
   </main>
 
   <footer id="contact" class="site-footer">
@@ -95,6 +96,8 @@
     </section>
   </div>
 
+
+  <div class="game-backdrop" id="gameModal" aria-hidden="true"><section class="game-modal"><button class="game-close" id="gameClose" type="button">×</button><span class="eyebrow">HNSHOP • THỬ VẬN MAY</span><h2 id="gameTitle">Vòng quay</h2><p class="wallet-line">Số dư ví: <b id="gameWallet">Đang tải...</b></p><div class="wheel-stage" id="wheelStage"><div class="wheel-pointer"></div><div class="prize-wheel" id="prizeWheel"><span>Key 1 ngày<br>84%</span><span>Key 3 ngày<br>6%</span><span>Key 7 ngày<br>3%</span><span>Key 30 ngày<br>1%</span><span>20.000 đ<br>4%</span><span>50.000 đ<br>2%</span></div><div class="wheel-hub">HN</div></div><div class="blindbox-stage" id="blindStage" hidden><div class="blindbox-large">?</div><p>Trong túi có thể là key 1/3/7/30 ngày hoặc tiền vào ví.</p></div><button class="game-play" id="gamePlay" type="button">QUAY • 15.000 đ</button><p class="game-result" id="gameResult" aria-live="polite">Đăng nhập và nạp số dư ví để tham gia.</p><p class="game-odds">Tỷ lệ: Key 1 ngày 84% · Key 3 ngày 6% · Key 7 ngày 3% · Key 30 ngày 1% · 20.000 đ 4% · 50.000 đ 2%.</p></section></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
