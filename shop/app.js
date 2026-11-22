@@ -474,5 +474,57 @@ async function loadShopBrand() {
   }
 }
 
+
+/* VÒNG QUAY & TÚI MÙ - kết quả và trừ ví do Supabase xử lý */
+const gameModal=document.getElementById("gameModal");
+let activeGame="wheel",gameBusy=false,wheelRotation=0;
+function closeGame(){gameModal.classList.remove("show");gameModal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
+async function refreshGameWallet(){
+ const node=document.getElementById("gameWallet");
+ if(!currentUser){node.textContent="Đăng nhập để xem ví";return;}
+ node.textContent="Đang tải...";
+ const {data,error}=await db.rpc("shop_game_wallet_balance");
+ if(error){node.textContent="Chưa sẵn sàng";document.getElementById("gameResult").textContent="Ví chưa được khởi tạo. Admin cần chạy SQL trò chơi.";return;}
+ node.textContent=moneyVND(data);
+}
+function openGame(type){
+ activeGame=type==="blindbox"?"blindbox":"wheel";
+ if(!currentUser){showAccount();accountMessage.textContent="Đăng nhập tài khoản khách hàng để tham gia trò chơi.";return;}
+ document.getElementById("gameTitle").textContent=activeGame==="wheel"?"Vòng quay Key Chấp Tố Menu Tím":"Túi mù HNShop";
+ document.getElementById("wheelStage").hidden=activeGame!=="wheel";
+ document.getElementById("blindStage").hidden=activeGame!=="blindbox";
+ document.getElementById("gamePlay").textContent=activeGame==="wheel"?"QUAY • 15.000 đ":"MỞ TÚI • 15.000 đ";
+ document.getElementById("gameResult").textContent="Mỗi lượt 15.000 đ. Kết quả được hệ thống xác định.";
+ document.getElementById("prizeWheel").style.transform="rotate(0deg)";
+ document.getElementById("blindStage").querySelector(".blindbox-large").classList.remove("opening");
+ gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+ refreshGameWallet();
+}
+document.querySelectorAll("[data-game]").forEach(btn=>btn.addEventListener("click",()=>openGame(btn.dataset.game)));
+document.getElementById("gameClose").addEventListener("click",closeGame);
+gameModal.addEventListener("click",e=>{if(e.target===gameModal)closeGame();});
+document.getElementById("gamePlay").addEventListener("click",async()=>{
+ if(gameBusy)return;
+ if(!currentUser){closeGame();showAccount();accountMessage.textContent="Vui lòng đăng nhập trước khi chơi.";return;}
+ gameBusy=true;const btn=document.getElementById("gamePlay");btn.disabled=true;
+ const resultNode=document.getElementById("gameResult");resultNode.textContent="Đang xác định phần thưởng...";
+ const wheel=document.getElementById("prizeWheel");const box=document.querySelector(".blindbox-large");
+ if(activeGame==="wheel"){wheelRotation+=1800+Math.floor(Math.random()*360);wheel.style.transform="rotate("+wheelRotation+"deg)";}
+ else box.classList.add("opening");
+ try{
+  const {data,error}=await db.rpc("shop_play_game",{p_game_type:activeGame});
+  if(error)throw error;
+  const prize=typeof data==="string"?JSON.parse(data):data;
+  await new Promise(resolve=>setTimeout(resolve,activeGame==="wheel"?4100:1300));
+  if(activeGame==="blindbox")box.classList.remove("opening");
+  resultNode.innerHTML="🎉 Bạn nhận được: <b>"+safe(prize.prize_label)+"</b>"+(prize.key_value?"<br><code class='customer-key'>"+safe(prize.key_value)+"</code>":"") ;
+  document.getElementById("gameWallet").textContent=moneyVND(prize.balance);
+ }catch(e){
+  if(activeGame==="blindbox")box.classList.remove("opening");
+  resultNode.textContent="Không thể chơi: "+(e.message||e);
+  await refreshGameWallet();
+ }finally{gameBusy=false;btn.disabled=false;}
+});
+
 loadProducts();
 loadShopBrand();
