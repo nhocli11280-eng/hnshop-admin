@@ -1298,13 +1298,30 @@ async function loadOrders() {
  const rowsHtml=combined.map(x=>{
   if(x._kind==='regular') {
    const c=people.find(p=>String(p.id)===String(x.customer_id));
-   return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button onclick="showOrder('${escapeHTML(x.id)}')">Chi tiết</button><button onclick="changeStatus('${escapeHTML(x.id)}')">Đổi trạng thái</button></div></td></tr>`;
+   return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-regular" data-order-id="${escapeHTML(x.id)}">Chi tiết</button><button type="button" data-order-action="status-regular" data-order-id="${escapeHTML(x.id)}">Đổi trạng thái</button></div></td></tr>`;
   }
-  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button onclick="showStoreOrder('${escapeHTML(x.id)}')">Chi tiết</button>${x.status==='pending'? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button>`:''}</div></td></tr>`;
+  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-shop" data-order-id="${escapeHTML(x.id)}">Chi tiết</button>${x.status==='pending'? `<button type="button" data-order-action="confirm-shop" data-order-id="${escapeHTML(x.id)}">Xác nhận đã nhận tiền</button>`:''}</div></td></tr>`;
  }).join('');
  const errorHtml=errors.length?`<tr><td colspan="6" style="color:#ffb1b1">Lỗi tải một phần dữ liệu: ${escapeHTML(errors.join(' | '))}</td></tr>`:'';
  $('orderRows').innerHTML=(rowsHtml||'<tr><td colspan="6">Chưa có đơn hàng.</td></tr>')+errorHtml;
 }
+$('orderRows').addEventListener('click', async event => {
+ const button=event.target.closest('button[data-order-action]');
+ if(!button) return;
+ const id=button.dataset.orderId;
+ const action=button.dataset.orderAction;
+ button.disabled=true;
+ try {
+  if(action==='detail-shop') await window.showStoreOrder(id);
+  else if(action==='confirm-shop') await window.confirmStoreOrder(id);
+  else if(action==='detail-regular') await window.showOrder(id);
+  else if(action==='status-regular') await window.changeStatus(id);
+ } catch(e) {
+  fail(e);
+ } finally {
+  button.disabled=false;
+ }
+});
 
 window.showOrder = async id => {
  try {
