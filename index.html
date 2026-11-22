@@ -903,6 +903,7 @@ function subscribeAdminRealtime() {
   .on('postgres_changes',{event:'*',schema:'public',table:'categories'},()=>scheduleAdminRealtimeRefresh('categories'))
   .on('postgres_changes',{event:'*',schema:'public',table:'product_keys'},()=>scheduleAdminRealtimeRefresh('product_keys'))
   .on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>scheduleAdminRealtimeRefresh('customers'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'shop_wallet_topups'},()=>loadOrders().catch(e=>console.warn('Cập nhật đơn nạp ví:',e)))
   .subscribe((status)=>{
    if(status==='SUBSCRIBED') {
     $('dashboardUpdated').textContent='Đang kết nối cập nhật tức thì';
