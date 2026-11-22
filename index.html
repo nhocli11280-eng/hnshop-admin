@@ -1278,22 +1278,32 @@ $('cancelBanner').onclick = clearBanner;
 
 /* ĐƠN HÀNG */
 async function loadOrders() {
+ const errors=[];
+ const safeOrders=async(label,query)=>{
+  try { return await run(query); }
+  catch(e) { errors.push(label+': '+(e.message||String(e))); return []; }
+ };
  const [rows,shopRows]=await Promise.all([
-  run(db.from('orders').select('id,customer_id,total,status,note,created_at').order('created_at',{ascending:false}).limit(100)),
-  run(db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}).limit(100))
+  safeOrders('Đơn thường',db.from('orders').select('id,customer_id,total,status,created_at').order('created_at',{ascending:false}).limit(100)),
+  safeOrders('Đơn Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}).limit(100))
  ]);
  const ids=[...new Set(rows.map(x=>x.customer_id).filter(Boolean))];
  let people=[];
- if(ids.length) people=await run(db.from('customers').select('id,name,phone').in('id',ids));
+ if(ids.length) {
+  try { people=await run(db.from('customers').select('id,name,phone').in('id',ids)); }
+  catch(e) { errors.push('Tên khách: '+(e.message||String(e))); }
+ }
  const combined=[...rows.map(x=>({...x,_kind:'regular'})),...shopRows.map(x=>({...x,_kind:'shop'}))]
-  .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
- $('orderRows').innerHTML=combined.length?combined.map(x=>{
-  if(x._kind==='regular'){
+  .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+ const rowsHtml=combined.map(x=>{
+  if(x._kind==='regular') {
    const c=people.find(p=>String(p.id)===String(x.customer_id));
    return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button onclick="showOrder('${escapeHTML(x.id)}')">Chi tiết</button><button onclick="changeStatus('${escapeHTML(x.id)}')">Đổi trạng thái</button></div></td></tr>`;
   }
   return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button onclick="showStoreOrder('${escapeHTML(x.id)}')">Chi tiết</button>${x.status==='pending'? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button>`:''}</div></td></tr>`;
- }).join(''):'<tr><td colspan="6">Chưa có đơn hàng</td></tr>';
+ }).join('');
+ const errorHtml=errors.length?`<tr><td colspan="6" style="color:#ffb1b1">Lỗi tải một phần dữ liệu: ${escapeHTML(errors.join(' | '))}</td></tr>`:'';
+ $('orderRows').innerHTML=(rowsHtml||'<tr><td colspan="6">Chưa có đơn hàng.</td></tr>')+errorHtml;
 }
 
 window.showOrder = async id => {
