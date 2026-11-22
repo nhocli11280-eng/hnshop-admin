@@ -672,6 +672,8 @@ async function verifyAdmin() {
   $('sellMonitor').classList.remove('hidden');
   $('adminDiagnosticsBtn').textContent = 'Kiểm tra lỗi hệ thống';
   await loadSellMonitor();
+  subscribeSellRealtime();
+  startSellAutoRefresh();
  } else {
   document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('hidden'));
   $('sellMonitorNav').classList.add('hidden');
@@ -1806,7 +1808,31 @@ $('grantSellBtn').onclick=async()=>{
 $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage').textContent=e.message||String(e));
 
 /* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
-async function loadSellMonitor(){
+async let sellRealtimeChannel = null;
+let sellAutoRefreshTimer = null;
+function subscribeSellRealtime(){
+ if(sellRealtimeChannel) return;
+ sellRealtimeChannel = db.channel('hnshop-sell-live')
+  .on('postgres_changes',{event:'*',schema:'public',table:'store_orders'},()=>scheduleSellRefresh())
+  .on('postgres_changes',{event:'*',schema:'public',table:'shop_customer_access'},()=>scheduleSellRefresh())
+  .subscribe();
+}
+let sellRefreshTimer = null;
+function scheduleSellRefresh(){
+ clearTimeout(sellRefreshTimer);
+ sellRefreshTimer=setTimeout(()=>loadSellMonitor(),500);
+}
+function startSellAutoRefresh(){
+ if(sellAutoRefreshTimer) return;
+ sellAutoRefreshTimer=setInterval(()=>{
+  if(!document.hidden && $('sellMonitor') && !$('sellMonitor').classList.contains('hidden')) loadSellMonitor();
+ },20000);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden && $('sellMonitor') && !$('sellMonitor').classList.contains('hidden')) loadSellMonitor();
+});
+
+function loadSellMonitor(){
  $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
  $('sellCustomerRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
  $('sellPurchaseRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
