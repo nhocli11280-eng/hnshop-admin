@@ -1130,96 +1130,72 @@ $('savePackage').onclick=async()=>{
  }catch(e){fail(e);}finally{btn.disabled=false;}
 };
 
-/* LƯU SẢN PHẨM: kiểm tra dữ liệu và xác nhận bản ghi trả về */
+/* LƯU / SỬA SẢN PHẨM: xác nhận dữ liệu thực sự được ghi */
 $('saveProduct').onclick = async () => {
  const btn = $('saveProduct');
-
  try {
-  btn.disabled = true;
-  btn.textContent = 'Đang lưu...';
-
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
   const id = $('productId').value;
   const old = products.find(x => String(x.id) === String(id));
-
-  const file = $('pImage').files[0];
+  if(id && !old) throw Error('Không tìm thấy sản phẩm cần sửa. Hãy tải lại danh sách.');
+  const file = $('pImage').files && $('pImage').files[0];
   const image = await uploadImage(file);
-
   const priceText = $('pPrice').value.trim();
-
   const row = {
-   name: $('pName').value.trim(),
-   price: Number(priceText),
-   category_id: $('pCategory').value || null,
-   description: $('pDescription').value.trim(),
-   detail: $('pDetail').value.trim(),
-   image_url: image || old?.image_url || null,
-   is_active: $('pActive').checked
+   name:$('pName').value.trim(), price:Number(priceText),
+   category_id:$('pCategory').value || null,
+   description:$('pDescription').value.trim(), detail:$('pDetail').value.trim(),
+   image_url:image || old?.image_url || null, is_active:$('pActive').checked
   };
-
   if(!row.name) throw Error('Nhập tên sản phẩm');
-
-  if(priceText === '' || !Number.isFinite(row.price) || row.price < 0) {
-   throw Error('Giá sản phẩm không hợp lệ');
-  }
-
-  if(id) {
-   await run(
-    db.from('products')
-     .update(row)
-     .eq('id', id)
-     .select()
-     .single()
-   );
-  } else {
-   await run(
-    db.from('products')
-     .insert(row)
-     .select()
-     .single()
-   );
-  }
-
-  clearProduct();
-  await loadProducts();
-  await loadDashboard();
-  message('Đã lưu sản phẩm thành công');
-
- } catch(e) {
-  fail(e);
- } finally {
-  btn.disabled = false;
-  btn.textContent = 'Lưu sản phẩm';
- }
+  if(priceText==='' || !Number.isFinite(row.price) || row.price<0) throw Error('Giá sản phẩm không hợp lệ');
+  const saved = id
+   ? await run(db.from('products').update(row).eq('id',id).select('id,name').single())
+   : await run(db.from('products').insert(row).select('id,name').single());
+  if(!saved || !saved.id) throw Error('Máy chủ chưa xác nhận lưu sản phẩm.');
+  await loadProducts(); await loadDashboard(); clearProduct();
+  message(id?'Đã cập nhật sản phẩm thành công':'Đã thêm sản phẩm thành công');
+ } catch(e) { fail(e); }
+ finally { btn.disabled=false; btn.textContent='Lưu sản phẩm'; }
 };
 
 window.editProduct = id => {
- const x = products.find(a => String(a.id) === String(id));
- if(!x) return;
-
- $('productId').value = x.id;
- $('pName').value = x.name || '';
- $('pPrice').value = x.price ?? '';
- $('pCategory').value = x.category_id || '';
- $('pDescription').value = x.description || '';
- $('pDetail').value = x.detail || '';
- $('pActive').checked = x.is_active !== false;
- $('pImage').value = '';
- $('productFormTitle').textContent = 'Sửa sản phẩm';
-
- window.scrollTo({top:0, behavior:'smooth'});
+ const x=products.find(a=>String(a.id)===String(id));
+ if(!x){message('Không tìm thấy sản phẩm. Hãy tải lại danh sách.',true);return;}
+ $('productId').value=x.id; $('pName').value=x.name||'';
+ $('pPrice').value=x.price??''; $('pCategory').value=x.category_id||'';
+ $('pDescription').value=x.description||''; $('pDetail').value=x.detail||'';
+ $('pActive').checked=x.is_active!==false; $('pImage').value='';
+ $('pImageName').textContent='Giữ ảnh hiện tại nếu không chọn ảnh mới';
+ $('productFormTitle').textContent='Sửa sản phẩm';
+ window.scrollTo({top:0,behavior:'smooth'});
 };
 
 window.deleteProduct = async id => {
- if(!confirm('Xóa sản phẩm này?')) return;
-
+ const product=products.find(x=>String(x.id)===String(id));
+ if(!product){message('Không tìm thấy sản phẩm. Hãy tải lại danh sách.',true);return;}
+ if(!confirm('Xóa sản phẩm "'+product.name+'" khỏi cửa hàng? Nếu đã có gói key, key kho hoặc đơn hàng liên kết, hệ thống sẽ ẩn sản phẩm để giữ lịch sử.'))return;
  try {
-  await run(db.from('products').delete().eq('id', id));
-  await loadProducts();
-  await loadDashboard();
-  message('Đã xóa sản phẩm');
- } catch(e) {
-  fail(e);
- }
+  const [packages,keys,orderItems]=await Promise.all([
+   run(db.from('product_packages').select('id').eq('product_id',id).limit(1)),
+   run(db.from('product_keys').select('id').eq('product_id',id).limit(1)),
+   run(db.from('store_order_items').select('id').eq('product_id',id).limit(1))
+  ]);
+  if(packages.length||keys.length||orderItems.length){
+   await run(db.from('products').update({is_active:false}).eq('id',id).select('id').single());
+   await loadProducts(); await loadDashboard();
+   message('Đã ẩn sản phẩm vì còn dữ liệu liên kết. Lịch sử và key được giữ nguyên.');
+  } else {
+   try {
+    await run(db.from('products').delete().eq('id',id).select('id').single());
+    await loadProducts(); await loadDashboard(); message('Đã xóa sản phẩm thành công');
+   } catch(deleteError) {
+    await run(db.from('products').update({is_active:false}).eq('id',id).select('id').single());
+    await loadProducts(); await loadDashboard();
+    message('Không thể xóa cứng do dữ liệu liên kết; sản phẩm đã được ẩn để bảo toàn dữ liệu.');
+   }
+  }
+ } catch(e) { fail(e); }
 };
 
 function clearProduct() {
