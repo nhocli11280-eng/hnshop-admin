@@ -202,16 +202,30 @@ tr:hover td{background:rgba(0,145,220,.055)}
 
 <section id="dashboard" class="page">
 <h2>Tổng quan</h2>
+<div class="actions" style="margin-bottom:14px">
+<button id="refreshDashboard" class="secondary" type="button">Làm mới tổng quan</button>
+<span id="dashboardUpdated" style="color:#9bc6df;font-size:13px;align-self:center" aria-live="polite"></span>
+</div>
 <div class="stats">
-<div class="stat">Sản phẩm<strong id="statProducts">0</strong></div>
-<div class="stat">Danh mục<strong id="statCategories">0</strong></div>
-<div class="stat">Đơn hàng<strong id="statOrders">0</strong></div>
-<div class="stat">Khách hàng<strong id="statCustomers">0</strong></div>
+<div class="stat">Tổng sản phẩm<strong id="statProducts">—</strong></div>
+<div class="stat">Sản phẩm đang bán<strong id="statActiveProducts">—</strong></div>
+<div class="stat">Danh mục<strong id="statCategories">—</strong></div>
+<div class="stat">Tổng đơn hàng<strong id="statOrders">—</strong></div>
+<div class="stat">Đơn chờ xử lý<strong id="statPendingOrders">—</strong></div>
+<div class="stat">Tổng giá trị đơn<strong id="statRevenue">—</strong></div>
+<div class="stat">Khách hàng<strong id="statCustomers">—</strong></div>
+<div class="stat">Key còn trong kho<strong id="statAvailableKeys">—</strong></div>
+<div class="stat">Key đã cấp<strong id="statDeliveredKeys">—</strong></div>
+<div class="stat">Đơn Shop<strong id="statStoreOrders">—</strong></div>
 </div>
 <div class="panel" style="margin-top:18px">
 <h3>Đơn hàng gần đây</h3>
-<div id="recentOrders"></div>
+<div class="table-wrap"><table>
+<thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+<tbody id="recentOrders"><tr><td colspan="5">Đang tải...</td></tr></tbody>
+</table></div>
 </div>
+<p id="dashboardMessage" aria-live="polite" style="color:#9bc6df"></p>
 </section>
 
 <section id="products" class="page hidden">
@@ -554,36 +568,45 @@ document.querySelectorAll('nav button').forEach(btn => {
 /* DASHBOARD: lấy mảng dữ liệu trước khi đọc length,
    tránh lỗi null.length từ truy vấn head:true. */
 async function loadDashboard() {
- try {
-  const [p, c, o, u] = await Promise.all([
-   run(db.from('products').select('id')),
-   run(db.from('categories').select('id')),
-   run(db.from('orders').select('id')),
-   run(db.from('customers').select('id'))
-  ]);
-
-  $('statProducts').textContent = p.length;
-  $('statCategories').textContent = c.length;
-  $('statOrders').textContent = o.length;
-  $('statCustomers').textContent = u.length;
-
-  const recent = await run(
-   db.from('orders')
-    .select('id,total,status,created_at')
-    .order('created_at', {ascending:false})
-    .limit(5)
-  );
-
-  $('recentOrders').innerHTML = recent.length
-   ? recent.map(x =>
-      `<p>Đơn #${escapeHTML(x.id)} — ${money(x.total)} — ${escapeHTML(x.status)}</p>`
-     ).join('')
-   : 'Chưa có đơn hàng';
-
- } catch(e) {
-  fail(e);
- }
+ const ids=['statProducts','statActiveProducts','statCategories','statOrders','statPendingOrders','statRevenue','statCustomers','statAvailableKeys','statDeliveredKeys','statStoreOrders'];
+ ids.forEach(id=>{if($(id))$(id).textContent='…';});
+ $('recentOrders').innerHTML='<tr><td colspan="5">Đang tải dữ liệu...</td></tr>';
+ $('dashboardMessage').textContent='Đang cập nhật các chỉ số...';
+ const errors=[];
+ const safe=async(label,query)=>{
+  try{return await run(query);}catch(e){errors.push(label+': '+(e.message||String(e)));return [];}
+ };
+ const [p,c,o,u,k,so]=await Promise.all([
+  safe('Sản phẩm',db.from('products').select('id,is_active')),
+  safe('Danh mục',db.from('categories').select('id')),
+  safe('Đơn hàng',db.from('orders').select('id,total,status,created_at,customer_id').order('created_at',{ascending:false})),
+  safe('Khách hàng',db.from('customers').select('id')),
+  safe('Kho key',db.from('product_keys').select('id,status')),
+  safe('Đơn hàng Shop',db.from('store_orders').select('id,total,status'))
+ ]);
+ $('statProducts').textContent=p.length;
+ $('statActiveProducts').textContent=p.filter(x=>x.is_active!==false).length;
+ $('statCategories').textContent=c.length;
+ $('statOrders').textContent=o.length;
+ $('statPendingOrders').textContent=o.filter(x=>['pending','unpaid','processing'].includes(String(x.status||'').toLowerCase())).length;
+ $('statRevenue').textContent=money(o.reduce((sum,x)=>sum+Number(x.total||0),0));
+ $('statCustomers').textContent=u.length;
+ $('statAvailableKeys').textContent=k.filter(x=>x.status==='available').length;
+ $('statDeliveredKeys').textContent=k.filter(x=>x.status==='delivered').length;
+ $('statStoreOrders').textContent=so.length;
+ const recent=o.slice(0,10);
+ let people=[];
+ const customerIds=[...new Set(recent.map(x=>x.customer_id).filter(Boolean))];
+ if(customerIds.length)people=await safe('Tên khách hàng',db.from('customers').select('id,name').in('id',customerIds));
+ $('recentOrders').innerHTML=recent.length?recent.map(x=>{
+  const person=people.find(y=>String(y.id)===String(x.customer_id));
+  return '<tr><td>#'+escapeHTML(x.id)+'</td><td>'+escapeHTML(person?.name||'—')+'</td><td>'+money(x.total)+'</td><td>'+escapeHTML(x.status||'—')+'</td><td>'+date(x.created_at)+'</td></tr>';
+ }).join(''):'<tr><td colspan="5">Chưa có đơn hàng.</td></tr>';
+ $('dashboardUpdated').textContent='Cập nhật lúc '+new Date().toLocaleTimeString('vi-VN');
+ $('dashboardMessage').textContent=errors.length?'Một số mục chưa tải được: '+errors.join(' | '):'Đã tải đầy đủ dữ liệu tổng quan.';
+ if(errors.length)console.warn('Dashboard partial data:',errors);
 }
+$('refreshDashboard').onclick=()=>loadDashboard().catch(fail);
 
 /* DANH MỤC */
 async function loadCategories() {
