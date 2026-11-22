@@ -501,8 +501,22 @@ async function loadShopGameConfig(){
    let acc=0;const parts=prizes.map((p,i)=>{const from=acc/100;acc+=Number(p.weight);return colors[i%colors.length]+" "+from+"% "+(acc/100)+"%";});
    if(!shopGameConfig.wheel_image_url)wheel.style.background="conic-gradient("+parts.join(",")+")";
   }
-  if(shopGameConfig?.wheel_image_url)wheel.style.backgroundImage="url("+JSON.stringify(shopGameConfig.wheel_image_url)+")";
-  if(shopGameConfig?.blindbox_image_url){const box=document.querySelector(".blindbox-large");box.style.backgroundImage="url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";box.classList.add("has-custom-image");}
+  const wheelUrl=shopGameConfig?.wheel_image_url||"";
+  const wheelCard=document.querySelector(".wheel-art");
+  const wheelStage=document.getElementById("wheelStage");
+  if(wheelUrl){
+   if(wheelCard){wheelCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(wheelUrl)+")";wheelCard.style.backgroundSize="cover";wheelCard.style.backgroundPosition="center";}
+   if(wheelStage){wheelStage.style.backgroundImage="url("+JSON.stringify(wheelUrl)+")";wheelStage.classList.add("has-outer-image");}
+  }else{
+   if(wheelCard)wheelCard.style.backgroundImage="";
+   if(wheelStage){wheelStage.style.backgroundImage="";wheelStage.classList.remove("has-outer-image");}
+  }
+  if(shopGameConfig?.blindbox_image_url){
+   const box=document.querySelector(".blindbox-large");
+   const blindCard=document.querySelector(".blind-art");
+   if(box){box.style.backgroundImage="url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";box.classList.add("has-custom-image");}
+   if(blindCard){blindCard.style.backgroundImage="linear-gradient(#07142655,#07142655),url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";blindCard.style.backgroundSize="cover";blindCard.style.backgroundPosition="center";}
+  }
   const odds=document.querySelector(".game-odds");
   if(odds&&prizes.length)odds.textContent="Tỷ lệ: "+prizes.map(p=>p.label+" "+(Number(p.weight)/100)+"%").join(" · ");
  }catch(e){console.warn("Không tải được cấu hình trò chơi",e);}
@@ -550,3 +564,4 @@ document.getElementById("gamePlay").addEventListener("click",async()=>{
 
 loadProducts();
 loadShopBrand();
+loadShopGameConfig();
