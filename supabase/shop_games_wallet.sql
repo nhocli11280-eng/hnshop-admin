@@ -51,7 +51,7 @@ as $$
 declare
  v_uid uuid:=auth.uid(); v_cost numeric:=15000; v_balance numeric; v_roll integer;
  v_prize_type text; v_label text; v_value numeric:=0; v_days integer;
- v_product_id bigint; v_package_id bigint; v_key_id uuid; v_key text; v_play_id bigint;
+ v_product_id bigint; v_package_id uuid; v_key_id uuid; v_key text; v_play_id bigint;
 begin
  if v_uid is null then raise exception 'Vui lòng đăng nhập để tham gia'; end if;
  if p_game_type not in ('wheel','blindbox') then raise exception 'Trò chơi không hợp lệ'; end if;
@@ -59,7 +59,7 @@ begin
  insert into public.shop_customer_wallets(user_id) values(v_uid) on conflict(user_id) do nothing;
  select balance into v_balance from public.shop_customer_wallets where user_id=v_uid for update;
  if v_balance<v_cost then raise exception 'Ví không đủ số dư. Mỗi lượt chơi cần % đ; ví hiện có % đ',v_cost,v_balance; end if;
- v_roll=(get_byte(gen_random_bytes(2),0)*256+get_byte(gen_random_bytes(2),1))%10000;
+ v_roll=floor(random()*10000)::integer;
  if v_roll<8400 then v_prize_type:='key';v_days:=1;v_label:='Key 1 ngày';
  elsif v_roll<9000 then v_prize_type:='key';v_days:=3;v_label:='Key 3 ngày';
  elsif v_roll<9300 then v_prize_type:='key';v_days:=7;v_label:='Key 7 ngày';
