@@ -396,3 +396,16 @@ body{animation:none!important}
 .blindbox-large.has-custom-image{background-size:cover;background-position:center;color:transparent;text-shadow:none}
 .blindbox-large.has-custom-image::after{content:""}
 .prize-wheel{background-size:cover;background-position:center}
+
+
+/* Ảnh quản trị chọn nằm ở viền ngoài, không phủ mặt chia ô vòng quay */
+.wheel-stage.has-outer-image{
+ background-size:cover;
+ background-position:center;
+ background-repeat:no-repeat;
+ border-radius:50%;
+ box-shadow:0 0 0 3px #b4edff,0 0 28px #c34dff88;
+}
+.wheel-stage.has-outer-image .prize-wheel{
+ inset:18px;
+}
