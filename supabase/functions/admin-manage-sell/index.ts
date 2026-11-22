@@ -41,10 +41,10 @@ Deno.serve(async (req) => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply({ error: "Email không hợp lệ." }, 400);
       if (password.length < 8) return reply({ error: "Mật khẩu phải có ít nhất 8 ký tự." }, 400);
       const { data, error } = await admin.auth.admin.createUser({
-        email, password, email_confirm: true, app_metadata: { role: "sell" },
+        email, password, email_confirm: true, app_metadata: { role: "sell" }, user_metadata: { username },
       });
       if (error) return reply({ error: error.message }, 400);
-      return reply({ user: { id: data.user.id, email: data.user.email } });
+      return reply({ user: { id: data.user.id, username } });
     }
 
     const userId = String(body.user_id || "");
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         if (error) return reply({ error: error.message }, 400);
         for (const u of data.users) {
           const role = u.app_metadata?.role;
-          if (role === "sell" || role === "disabled") all.push({ id: u.id, email: u.email, disabled: role === "disabled" || Boolean(u.banned_until) });
+          if (role === "sell" || role === "disabled") all.push({ id: u.id, username: u.user_metadata?.username || "", disabled: role === "disabled" || Boolean(u.banned_until) });
         }
         if (data.users.length < 1000) break;
       }
