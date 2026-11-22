@@ -188,8 +188,8 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <section id="login">
 <h2>HNShop Admin</h2>
 <p>Đăng nhập tài khoản quản trị</p>
-<label>Email</label>
-<input id="email" type="email" placeholder="Email Admin">
+<label>Tên đăng nhập / Email Admin</label>
+<input id="email" type="text" autocomplete="username" placeholder="Tên đăng nhập Sell hoặc email Admin">
 <label>Mật khẩu</label>
 <input id="password" type="password" placeholder="Mật khẩu">
 <button id="loginBtn" style="width:100%">Đăng nhập</button>
@@ -406,15 +406,15 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <section id="sellStaff" class="page hidden">
 <h2>Quản lý tài khoản Sellkey</h2>
 <div class="panel">
-<p>Admin tự tạo tài khoản Sellkey bằng email và mật khẩu. Nhân viên dùng chính email và mật khẩu này để đăng nhập trang Admin; không cần tự đăng ký.</p>
-<label>Email đăng nhập Sellkey</label>
-<input id="sellStaffEmail" type="email" autocomplete="off" placeholder="sell@example.com">
+<p>Admin tự đặt tên đăng nhập và mật khẩu. Nhân viên dùng tên đăng nhập cùng mật khẩu này để vào trang Admin; không cần email hoặc tự đăng ký.</p>
+<label>Tên đăng nhập Sellkey</label>
+<input id="sellStaffUsername" type="text" autocomplete="off" maxlength="32" placeholder="Ví dụ: sell01">
 <label>Mật khẩu khởi tạo (ít nhất 8 ký tự)</label>
 <input id="sellStaffPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Nhập mật khẩu cho nhân viên">
 <div class="actions"><button id="grantSellBtn">Tạo tài khoản Sellkey</button><button class="secondary" id="refreshSellStaff">Làm mới danh sách</button></div>
 <p id="sellStaffMessage" aria-live="polite"></p>
 <div class="table-wrap"><table>
-<thead><tr><th>Email đăng nhập</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<thead><tr><th>Tên đăng nhập</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
 <tbody id="sellStaffRows"><tr><td colspan="3">Đang tải...</td></tr></tbody>
 </table></div>
 </div>
@@ -593,7 +593,7 @@ $('loginBtn').onclick = async () => {
   $('loginMsg').textContent = 'Đang đăng nhập...';
 
   const {error} = await db.auth.signInWithPassword({
-   email: $('email').value.trim(),
+   email: $('email').value.trim().includes('@') ? $('email').value.trim() : $('email').value.trim().toLowerCase() + '@sell.hnshop.invalid',
    password: $('password').value
   });
 
@@ -1571,7 +1571,7 @@ async function loadSellStaff() {
  const result=await manageSellAccount({action:'list'});
  const rows=Array.isArray(result.users)?result.users:[];
  $('sellStaffRows').innerHTML=rows.length?rows.map(x=>`
-  <tr><td>${escapeHTML(x.email||'')}</td><td>${x.disabled?'Đã vô hiệu hóa':'Đang hoạt động'}</td>
+  <tr><td>${escapeHTML(x.username||'')}</td><td>${x.disabled?'Đã vô hiệu hóa':'Đang hoạt động'}</td>
   <td><div class="actions">${x.disabled
    ? `<button onclick="setSellAccount('${escapeHTML(x.id)}','enable')">Kích hoạt</button>`
    : `<button class="secondary" onclick="setSellAccount('${escapeHTML(x.id)}','disable')">Kích khỏi Admin</button>`}
@@ -1588,16 +1588,17 @@ window.setSellAccount=async(userId,action)=>{
  }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
 };
 $('grantSellBtn').onclick=async()=>{
- const email=$('sellStaffEmail').value.trim();
+ const username=$('sellStaffUsername').value.trim().toLowerCase();
  const password=$('sellStaffPassword').value;
- if(!email||!password){$('sellStaffMessage').textContent='Nhập email và mật khẩu cho tài khoản Sellkey.';return;}
+ if(!username||!password){$('sellStaffMessage').textContent='Nhập tên đăng nhập và mật khẩu cho tài khoản Sellkey.';return;}
+ if(!/^[a-z0-9._-]{3,32}$/.test(username)){$('sellStaffMessage').textContent='Tên đăng nhập gồm 3–32 ký tự: chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.';return;}
  if(password.length<8){$('sellStaffMessage').textContent='Mật khẩu phải có ít nhất 8 ký tự.';return;}
  const btn=$('grantSellBtn');
  try{
   btn.disabled=true;btn.textContent='Đang tạo tài khoản...';
-  await manageSellAccount({action:'create',email,password});
-  $('sellStaffMessage').textContent='Đã tạo tài khoản Sellkey. Gửi email và mật khẩu cho nhân viên để đăng nhập.';
-  $('sellStaffEmail').value='';$('sellStaffPassword').value='';
+  await manageSellAccount({action:'create',username,password});
+  $('sellStaffMessage').textContent='Đã tạo tài khoản Sellkey. Gửi tên đăng nhập và mật khẩu cho nhân viên.';
+  $('sellStaffUsername').value='';$('sellStaffPassword').value='';
   await loadSellStaff();
  }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
  finally{btn.disabled=false;btn.textContent='Tạo tài khoản Sellkey';}
