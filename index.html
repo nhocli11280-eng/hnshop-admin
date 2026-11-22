@@ -755,31 +755,40 @@ async function loadDashboard() {
  const [p,c,o,u,k,so]=await Promise.all([
   safe('Sản phẩm',db.from('products').select('id,is_active')),
   safe('Danh mục',db.from('categories').select('id')),
-  safe('Đơn hàng',db.from('orders').select('id,total,status,created_at,customer_id').order('created_at',{ascending:false})),
+  safe('Đơn hàng thường',db.from('orders').select('id,total,status,created_at,customer_id').order('created_at',{ascending:false})),
   safe('Khách hàng',db.from('customers').select('id')),
   safe('Kho key',db.from('product_keys').select('id,status')),
-  safe('Đơn hàng Shop',db.from('store_orders').select('id,total,status'))
+  safe('Đơn hàng Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}))
  ]);
  $('statProducts').textContent=p.length;
  $('statActiveProducts').textContent=p.filter(x=>x.is_active!==false).length;
  $('statCategories').textContent=c.length;
- $('statOrders').textContent=o.length;
- $('statPendingOrders').textContent=o.filter(x=>['pending','unpaid','processing'].includes(String(x.status||'').toLowerCase())).length;
- $('statRevenue').textContent=money(o.reduce((sum,x)=>sum+Number(x.total||0),0));
+ $('statOrders').textContent=o.length+so.length;
+ $('statPendingOrders').textContent=
+  o.filter(x=>['pending','unpaid','processing'].includes(String(x.status||'').toLowerCase())).length+
+  so.filter(x=>['pending','unpaid','processing'].includes(String(x.status||'').toLowerCase())).length;
+ const regularRevenue=o.reduce((sum,x)=>sum+Number(x.total||0),0);
+ const shopRevenue=so.filter(x=>String(x.status||'').toLowerCase()==='fulfilled')
+  .reduce((sum,x)=>sum+Number(x.total||0),0);
+ $('statRevenue').textContent=money(regularRevenue+shopRevenue);
  $('statCustomers').textContent=u.length;
  $('statAvailableKeys').textContent=k.filter(x=>x.status==='available').length;
  $('statDeliveredKeys').textContent=k.filter(x=>x.status==='delivered').length;
  $('statStoreOrders').textContent=so.length;
- const recent=o.slice(0,10);
+ const recent=[
+  ...o.map(x=>({...x,_source:'regular'})),
+  ...so.map(x=>({...x,customer_name:x.customer_name||'Khách mua key',_source:'shop'}))
+ ].sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,10);
  let people=[];
- const customerIds=[...new Set(recent.map(x=>x.customer_id).filter(Boolean))];
+ const customerIds=[...new Set(recent.filter(x=>x._source==='regular').map(x=>x.customer_id).filter(Boolean))];
  if(customerIds.length)people=await safe('Tên khách hàng',db.from('customers').select('id,name').in('id',customerIds));
  $('recentOrders').innerHTML=recent.length?recent.map(x=>{
-  const person=people.find(y=>String(y.id)===String(x.customer_id));
-  return '<tr><td>#'+escapeHTML(x.id)+'</td><td>'+escapeHTML(person?.name||'—')+'</td><td>'+money(x.total)+'</td><td>'+escapeHTML(x.status||'—')+'</td><td>'+date(x.created_at)+'</td></tr>';
+  const person=x._source==='shop'?x.customer_name:people.find(y=>String(y.id)===String(x.customer_id))?.name;
+  const orderLabel=x._source==='shop'?'Shop · '+String(x.id).slice(0,8):String(x.id);
+  return '<tr><td>#'+escapeHTML(orderLabel)+'</td><td>'+escapeHTML(person||'—')+'</td><td>'+money(x.total)+'</td><td>'+escapeHTML(x.status||'—')+'</td><td>'+date(x.created_at)+'</td></tr>';
  }).join(''):'<tr><td colspan="5">Chưa có đơn hàng.</td></tr>';
  $('dashboardUpdated').textContent='Cập nhật lúc '+new Date().toLocaleTimeString('vi-VN');
- $('dashboardMessage').textContent=errors.length?'Một số mục chưa tải được: '+errors.join(' | '):'Đã tải đầy đủ dữ liệu tổng quan.';
+ $('dashboardMessage').textContent=errors.length?'Một số mục chưa tải được: '+errors.join(' | '):'Đã tải đầy đủ dữ liệu tổng quan (đã gộp đơn thường và đơn Shop).';
  if(errors.length)console.warn('Dashboard partial data:',errors);
 }
 $('refreshDashboard').onclick=()=>loadDashboard().catch(fail);
