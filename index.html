@@ -422,26 +422,35 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <section id="sellMonitor" class="page hidden">
 <h2>Theo dõi hệ thống & khách mua key</h2>
 <div class="panel">
-<h3>Lỗi hệ thống trên phiên làm việc này</h3>
-<p>Hiển thị lỗi JavaScript và tác vụ nền được ghi nhận trên trình duyệt đang đăng nhập.</p>
-<button id="refreshSellErrors" class="secondary">Làm mới lỗi</button>
-<ul id="sellErrorRows"><li>Chưa ghi nhận lỗi.</li></ul>
-</div>
-<div class="panel">
-<h3>Khách hàng đã mua key</h3>
-<button id="refreshSellCustomers" class="secondary">Làm mới danh sách</button>
-<div class="table-wrap"><table>
-<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Số đơn hoàn tất</th><th>Số key đã mua</th><th>Tổng tiền buy key</th></tr></thead>
-<tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
-</table></div>
-<p id="sellCustomerMessage" aria-live="polite"></p>
-<h3 style="margin-top:22px">Tổng hợp thống kê</h3>
+<h3>Tổng quan kinh doanh</h3>
 <div class="stats" id="sellSummaryStats">
  <div class="stat">Tổng khách hàng<strong id="sellStatCustomers">—</strong></div>
  <div class="stat">Đơn hoàn tất<strong id="sellStatOrders">—</strong></div>
  <div class="stat">Tổng key đã bán<strong id="sellStatKeys">—</strong></div>
  <div class="stat">Tổng doanh thu buy key<strong id="sellStatRevenue">—</strong></div>
 </div>
+<p id="sellCustomerMessage" aria-live="polite"></p>
+</div>
+<div class="panel">
+<h3>Thông tin khách hàng</h3>
+<button id="refreshSellCustomers" class="secondary">Làm mới danh sách</button>
+<div class="table-wrap"><table>
+<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th></tr></thead>
+<tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+<div class="panel">
+<h3>Thống kê mua key theo khách hàng</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Tên tài khoản</th><th>Số đơn hoàn tất</th><th>Số key đã mua</th><th>Tổng tiền buy key</th></tr></thead>
+<tbody id="sellPurchaseRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+<div class="panel">
+<h3>Lỗi hệ thống trên phiên làm việc này</h3>
+<p>Hiển thị lỗi JavaScript và tác vụ nền được ghi nhận trên trình duyệt đang đăng nhập.</p>
+<button id="refreshSellErrors" class="secondary">Làm mới lỗi</button>
+<ul id="sellErrorRows"><li>Chưa ghi nhận lỗi.</li></ul>
 </div>
 </section>
 <section id="branding" class="page hidden">
@@ -1638,7 +1647,8 @@ $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage')
 /* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
 async function loadSellMonitor(){
  $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
- $('sellCustomerRows').innerHTML='<tr><td colspan="7">Đang tải...</td></tr>';
+ $('sellCustomerRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
+ $('sellPurchaseRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
  $('sellStatCustomers').textContent='—';$('sellStatOrders').textContent='—';$('sellStatKeys').textContent='—';$('sellStatRevenue').textContent='—';
  try{
   const {data,error}=await db.rpc('sell_list_shop_customer_summary');
@@ -1647,10 +1657,13 @@ async function loadSellMonitor(){
   $('sellCustomerRows').innerHTML=rows.length?rows.map(x=>`<tr>
    <td>${escapeHTML(x.username||'Khách hàng')}</td><td>${escapeHTML(x.email||'')}</td>
    <td>${date(x.created_at)}</td><td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
+  </tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản khách hàng.</td></tr>';
+  $('sellPurchaseRows').innerHTML=rows.length?rows.map(x=>`<tr>
+   <td>${escapeHTML(x.username||'Khách hàng')}</td>
    <td>${Number(x.total_orders||0).toLocaleString('vi-VN')}</td>
    <td>${Number(x.total_keys||0).toLocaleString('vi-VN')}</td>
    <td>${storeMoney(x.total_spent)}</td>
-  </tr>`).join(''):'<tr><td colspan="7">Chưa có tài khoản khách hàng.</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="4">Chưa có dữ liệu mua key.</td></tr>';
   const totals=rows.reduce((a,x)=>({orders:a.orders+Number(x.total_orders||0),keys:a.keys+Number(x.total_keys||0),money:a.money+Number(x.total_spent||0)}),{orders:0,keys:0,money:0});
   $('sellCustomerMessage').textContent='Thống kê chỉ tính các đơn đã hoàn tất (fulfilled).';
   $('sellStatCustomers').textContent=rows.length.toLocaleString('vi-VN');
