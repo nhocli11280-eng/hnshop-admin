@@ -477,7 +477,7 @@ async function loadShopBrand() {
 
 /* VÒNG QUAY & TÚI MÙ - kết quả và trừ ví do Supabase xử lý */
 const gameModal=document.getElementById("gameModal");
-let activeGame="wheel",gameBusy=false,wheelRotation=0;
+let activeGame="wheel",gameBusy=false,wheelRotation=0,shopGameConfig=null;
 function closeGame(){gameModal.classList.remove("show");gameModal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
 async function refreshGameWallet(){
  const node=document.getElementById("gameWallet");
@@ -487,6 +487,27 @@ async function refreshGameWallet(){
  if(error){node.textContent="Chưa sẵn sàng";document.getElementById("gameResult").textContent="Ví chưa được khởi tạo. Admin cần chạy SQL trò chơi.";return;}
  node.textContent=moneyVND(data);
 }
+
+async function loadShopGameConfig(){
+ try{
+  const {data,error}=await db.rpc("shop_get_game_config");
+  if(error)throw error;
+  shopGameConfig=typeof data==="string"?JSON.parse(data):data;
+  const prizes=Array.isArray(shopGameConfig?.prizes)?shopGameConfig.prizes:[];
+  const wheel=document.getElementById("prizeWheel");
+  if(wheel&&prizes.length){
+   wheel.innerHTML=prizes.map(p=>"<span>"+safe(p.label)+"<br>"+(Number(p.weight)/100)+"%</span>").join("");
+   const colors=["#153b68","#0b6f83","#6845a0","#a34b73","#287a66","#9b6a2d"];
+   let acc=0;const parts=prizes.map((p,i)=>{const from=acc/100;acc+=Number(p.weight);return colors[i%colors.length]+" "+from+"% "+(acc/100)+"%";});
+   if(!shopGameConfig.wheel_image_url)wheel.style.background="conic-gradient("+parts.join(",")+")";
+  }
+  if(shopGameConfig?.wheel_image_url)wheel.style.backgroundImage="url("+JSON.stringify(shopGameConfig.wheel_image_url)+")";
+  if(shopGameConfig?.blindbox_image_url){const box=document.querySelector(".blindbox-large");box.style.backgroundImage="url("+JSON.stringify(shopGameConfig.blindbox_image_url)+")";box.classList.add("has-custom-image");}
+  const odds=document.querySelector(".game-odds");
+  if(odds&&prizes.length)odds.textContent="Tỷ lệ: "+prizes.map(p=>p.label+" "+(Number(p.weight)/100)+"%").join(" · ");
+ }catch(e){console.warn("Không tải được cấu hình trò chơi",e);}
+}
+
 function openGame(type){
  activeGame=type==="blindbox"?"blindbox":"wheel";
  if(!currentUser){showAccount();accountMessage.textContent="Đăng nhập tài khoản khách hàng để tham gia trò chơi.";return;}
@@ -499,6 +520,7 @@ function openGame(type){
  document.getElementById("blindStage").querySelector(".blindbox-large").classList.remove("opening");
  gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
  refreshGameWallet();
+ loadShopGameConfig();
 }
 document.querySelectorAll("[data-game]").forEach(btn=>btn.addEventListener("click",()=>openGame(btn.dataset.game)));
 document.getElementById("gameClose").addEventListener("click",closeGame);
