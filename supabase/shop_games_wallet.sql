@@ -82,7 +82,7 @@ begin
  insert into public.shop_game_plays(user_id,game_type,cost,prize_type,prize_label,prize_value,key_value)
  values(v_uid,p_game_type,v_cost,v_prize_type,v_label,case when v_prize_type='wallet' then v_value else null end,v_key) returning id into v_play_id;
  insert into public.shop_customer_wallet_transactions(user_id,amount,balance_after,reason,reference_id)
- values(v_uid,-v_cost,v_balance,'Phí tham gia '||case when p_game_type='wheel' then 'Vòng quay' else 'Túi mù' end,v_play_id);
+ values(v_uid,-v_cost,case when v_prize_type='wallet' then v_balance-v_value else v_balance end,'Phí tham gia '||case when p_game_type='wheel' then 'Vòng quay' else 'Túi mù' end,v_play_id);
  if v_prize_type='wallet' then
   insert into public.shop_customer_wallet_transactions(user_id,amount,balance_after,reason,reference_id) values(v_uid,v_value,v_balance,v_label,v_play_id);
  end if;
@@ -94,3 +94,17 @@ revoke all on function public.shop_play_game(text) from public;
 grant execute on function public.shop_game_wallet_balance() to authenticated;
 grant execute on function public.admin_shop_wallet_adjust(uuid,numeric,text) to authenticated;
 grant execute on function public.shop_play_game(text) to authenticated;
+
+-- Tiện ích cho Admin nạp/trừ ví theo email đăng nhập của khách hàng.
+create or replace function public.admin_shop_wallet_adjust_by_email(p_email text,p_amount numeric,p_reason text default 'Admin điều chỉnh số dư')
+returns numeric language plpgsql security definer set search_path=''
+as $$
+declare v_user_id uuid;
+begin
+ if coalesce(auth.jwt()->'app_metadata'->>'role','')<>'admin' then raise exception 'Chỉ Admin được điều chỉnh ví'; end if;
+ select id into v_user_id from auth.users where lower(email)=lower(trim(p_email)) limit 1;
+ if v_user_id is null then raise exception 'Không tìm thấy tài khoản khách hàng'; end if;
+ return public.admin_shop_wallet_adjust(v_user_id,p_amount,p_reason);
+end; $$;
+revoke all on function public.admin_shop_wallet_adjust_by_email(text,numeric,text) from public;
+grant execute on function public.admin_shop_wallet_adjust_by_email(text,numeric,text) to authenticated;
