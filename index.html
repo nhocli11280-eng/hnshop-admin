@@ -1374,9 +1374,10 @@ async function loadOrders() {
   try { return await run(query); }
   catch(e) { errors.push(label+': '+(e.message||String(e))); return []; }
  };
- const [rows,shopRows]=await Promise.all([
+ const [rows,shopRows,topupRows]=await Promise.all([
   safeOrders('Đơn thường',db.from('orders').select('id,customer_id,total,status,created_at').order('created_at',{ascending:false}).limit(100)),
-  safeOrders('Đơn Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}).limit(100))
+  safeOrders('Đơn Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}).limit(100)),
+  safeOrders('Đơn nạp ví',db.rpc('admin_list_shop_wallet_topups'))
  ]);
  const ids=[...new Set(rows.map(x=>x.customer_id).filter(Boolean))];
  let people=[];
@@ -1384,9 +1385,13 @@ async function loadOrders() {
   try { people=await run(db.from('customers').select('id,name,phone').in('id',ids)); }
   catch(e) { errors.push('Tên khách: '+(e.message||String(e))); }
  }
- const combined=[...rows.map(x=>({...x,_kind:'regular'})),...shopRows.map(x=>({...x,_kind:'shop'}))]
+ const combined=[...rows.map(x=>({...x,_kind:'regular'})),...shopRows.map(x=>({...x,_kind:'shop'})),...topupRows.map(x=>({...x,_kind:'wallet_topup',total:x.amount,customer_name:x.username||'Khách nạp ví'}))]
   .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
  const rowsHtml=combined.map(x=>{
+  if(x._kind==='wallet_topup') {
+   const actions=x.status==='pending'?'<div class="actions"><button type="button" data-order-action="approve-topup" data-order-id="'+escapeHTML(x.id)+'">Đã nhận tiền · Cộng ví</button><button type="button" class="danger" data-order-action="reject-topup" data-order-id="'+escapeHTML(x.id)+'">Từ chối nạp</button></div>':'';
+   return '<tr><td>Nạp ví · #'+escapeHTML(x.id)+'</td><td>'+escapeHTML(x.customer_name||'Khách')+'<br><small>'+escapeHTML(x.email||'')+'</small></td><td>'+money(x.amount)+'</td><td>'+escapeHTML(x.status==='pending'?'Chờ Admin xác nhận':x.status==='approved'?'Đã cộng ví':'Đã từ chối')+'<br><small>CK: '+escapeHTML(x.transfer_note||'')+'</small></td><td>'+date(x.created_at)+'</td><td>'+actions+'</td></tr>';
+  }
   if(x._kind==='regular') {
    const c=people.find(p=>String(p.id)===String(x.customer_id));
    return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-regular" data-order-id="${escapeHTML(x.id)}">Chi tiết</button><button type="button" data-order-action="status-regular" data-order-id="${escapeHTML(x.id)}">Đổi trạng thái</button></div></td></tr>`;
@@ -1406,6 +1411,15 @@ $('orderRows').addEventListener('click', async event => {
   if(action==='detail-shop') await window.showStoreOrder(id);
   else if(action==='confirm-shop') await window.confirmStoreOrder(id);
   else if(action==='cancel-shop') await window.cancelStoreOrder(id);
+  else if(action==='approve-topup'||action==='reject-topup') {
+   const approve=action==='approve-topup';
+   if(!confirm(approve?'Xác nhận đã nhận tiền cho đơn nạp ví #'+id+' và cộng tiền vào ví?':'Từ chối đơn nạp ví #'+id+'?'))return;
+   const note=prompt('Ghi chú Admin (có thể để trống):')||'';
+   const {data,error}=await db.rpc('admin_review_shop_wallet_topup',{p_topup_id:Number(id),p_approve:approve,p_admin_note:note});
+   if(error)throw error;
+   message(approve?'Đã xác nhận nạp ví. Số dư mới: '+money(data):'Đã từ chối đơn nạp ví.');
+   await loadOrders(); await loadDashboard();
+  }
   else if(action==='detail-regular') await window.showOrder(id);
   else if(action==='status-regular') await window.changeStatus(id);
  } catch(e) {
