@@ -384,6 +384,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <textarea id="keyInput" rows="8" placeholder="KEY-AAAA-1111&#10;KEY-BBBB-2222&#10;KEY-CCCC-3333"></textarea>
 <div class="actions">
 <button id="saveKeys">Nhập key vào kho</button>
+<button class="secondary" id="exportKeys">Xuất key còn trong kho (.txt)</button>
 <button class="secondary" id="refreshKeys">Làm mới thống kê</button>
 </div>
 <p id="keyMessage" aria-live="polite"></p>
@@ -393,11 +394,12 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div class="stat">Key đã cấp<strong id="deliveredKeys">0</strong></div>
 </div>
 <div class="panel">
-<h3>Key mới nhập gần đây</h3>
+<h3>Danh sách key gần đây</h3>
+<p>Chỉ key còn trong kho mới có nút xóa. Key đã cấp được giữ lại để bảo toàn lịch sử đơn hàng.</p>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Key</th><th>Trạng thái</th><th>Ngày nhập</th></tr></thead>
-<tbody id="keyRows"><tr><td colspan="3">Chọn sản phẩm để xem kho key</td></tr></tbody>
+<thead><tr><th>Key</th><th>Trạng thái</th><th>Ngày nhập</th><th>Thao tác</th></tr></thead>
+<tbody id="keyRows"><tr><td colspan="4">Chọn sản phẩm để xem kho key</td></tr></tbody>
 </table>
 </div>
 </div>
@@ -1150,7 +1152,7 @@ async function loadKeyStats() {
   if(!productId || !packageId) {
     $('availableKeys').textContent='0';
     $('deliveredKeys').textContent='0';
-    $('keyRows').innerHTML='<tr><td colspan="3">Chọn sản phẩm và gói key để xem kho.</td></tr>';
+    $('keyRows').innerHTML='<tr><td colspan="4">Chọn sản phẩm và gói key để xem kho.</td></tr>';
     return;
   }
 
@@ -1159,7 +1161,7 @@ async function loadKeyStats() {
       .eq('product_id',Number(productId)).eq('package_id',packageId).eq('status','available'),
     db.from('product_keys').select('id',{count:'exact',head:true})
       .eq('product_id',Number(productId)).eq('package_id',packageId).eq('status','delivered'),
-    db.from('product_keys').select('key_value,status,created_at')
+    db.from('product_keys').select('id,key_value,status,created_at')
       .eq('product_id',Number(productId)).eq('package_id',packageId)
       .order('created_at',{ascending:false}).limit(30)
   ]);
@@ -1170,8 +1172,10 @@ async function loadKeyStats() {
   $('deliveredKeys').textContent=delivered.count??0;
   $('keyRows').innerHTML=recent.data.length?recent.data.map(k=>'<tr><td>'+
     escapeHTML(k.key_value)+'</td><td>'+(k.status==='available'?'Còn':'Đã cấp')+
-    '</td><td>'+date(k.created_at)+'</td></tr>').join(''):
-    '<tr><td colspan="3">Gói này chưa có key.</td></tr>';
+    '</td><td>'+date(k.created_at)+'</td><td>'+(k.status==='available'
+      ?'<button class="danger" type="button" onclick="deleteInventoryKey(\''+escapeHTML(k.id)+'\')">Xóa</button>'
+      :'—')+'</td></tr>').join(''):
+    '<tr><td colspan="4">Gói này chưa có key.</td></tr>';
 }
 
 $('keyProduct').onchange=async()=>{
@@ -1179,6 +1183,46 @@ $('keyProduct').onchange=async()=>{
   catch(e){$('keyMessage').textContent='Không tải được gói key: '+(e.message||e);}
 };
 $('keyPackage').onchange=()=>loadKeyStats().catch(e=>$('keyMessage').textContent=e.message||e);
+
+window.deleteInventoryKey=async function(id){
+  if(!id || !confirm('Bạn chắc chắn muốn xóa key này khỏi kho? Chỉ key chưa cấp mới được xóa.'))return;
+  try{
+    const removed=await run(db.from('product_keys').delete().eq('id',id)
+      .eq('status','available').select('id'));
+    if(!removed.length)throw Error('Không xóa được: key có thể đã được cấp hoặc không còn tồn tại.');
+    $('keyMessage').textContent='Đã xóa key khỏi kho.';
+    await loadKeyStats();
+  }catch(e){
+    $('keyMessage').textContent='Lỗi xóa key: '+(e.message||e);
+  }
+};
+$('exportKeys').onclick=async()=>{
+  const btn=$('exportKeys');
+  try{
+    const productId=Number($('keyProduct').value);
+    const packageId=$('keyPackage').value;
+    if(!productId || !packageId)throw Error('Hãy chọn sản phẩm và gói key trước.');
+    btn.disabled=true;btn.textContent='Đang xuất...';
+    let all=[],from=0,batch;
+    do{
+      batch=await run(db.from('product_keys').select('key_value')
+        .eq('product_id',productId).eq('package_id',packageId)
+        .eq('status','available').order('created_at',{ascending:true})
+        .range(from,from+499));
+      all=all.concat(batch);from+=batch.length;
+    }while(batch.length===500);
+    if(!all.length)throw Error('Gói này không còn key trống để xuất.');
+    const blob=new Blob([all.map(x=>x.key_value).join('\n')+'\n'],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='hnshop-keys-'+productId+'-'+packageId+'.txt';
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    $('keyMessage').textContent='Đã xuất '+all.length+' key còn trong kho. Hãy giữ file này an toàn.';
+  }catch(e){
+    $('keyMessage').textContent='Không xuất được key: '+(e.message||e);
+  }finally{btn.disabled=false;btn.textContent='Xuất key còn trong kho (.txt)';}
+};
+
 $('refreshKeys').onclick=async()=>{
   try{await loadKeyStats();$('keyMessage').textContent='Đã cập nhật kho key.';}
   catch(e){$('keyMessage').textContent='Lỗi: '+(e.message||e);}
