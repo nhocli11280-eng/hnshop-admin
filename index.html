@@ -2141,7 +2141,7 @@ async function loadAdminWalletTopups(){
  const status={pending:'Đang chờ',approved:'Đã cộng ví',rejected:'Đã từ chối'};
  body.innerHTML=(data||[]).length?(data||[]).map(x=>{
   const actions=x.status==='pending'?'<div class="actions"><button type="button" data-topup-approve="'+x.id+'">Đã nhận tiền · Cộng ví</button><button type="button" class="danger" data-topup-reject="'+x.id+'">Từ chối</button></div>':'';
-  return '<tr><td>#'+x.id+'</td><td>'+escapeHtml(x.username||'Khách')+'<br><small>'+escapeHtml(x.email||'')+'</small></td><td>'+money(x.amount)+'</td><td>'+escapeHtml(x.note||'—')+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td><td>'+status[x.status]+'<br>'+actions+(x.admin_note?'<small>'+escapeHtml(x.admin_note)+'</small>':'')+'</td></tr>';
+  return '<tr><td>#'+x.id+'</td><td>'+escapeHTML(x.username||'Khách')+'<br><small>'+escapeHTML(x.email||'')+'</small></td><td>'+money(x.amount)+'</td><td>'+escapeHTML(x.note||'—')+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td><td>'+status[x.status]+'<br>'+actions+(x.admin_note?'<small>'+escapeHTML(x.admin_note)+'</small>':'')+'</td></tr>';
  }).join(''):'<tr><td colspan="6">Chưa có yêu cầu nạp ví.</td></tr>';
 }
 $('refreshWalletTopups').onclick=()=>loadAdminWalletTopups().catch(e=>$('walletTopupsMessage').textContent=e.message||String(e));
