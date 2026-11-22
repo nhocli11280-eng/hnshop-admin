@@ -489,6 +489,18 @@ async function refreshGameWallet(){
 }
 
 
+async function loadTopupPaymentInfo(){
+ const node=document.getElementById("topupPaymentInfo");
+ if(!node)return;
+ try{
+  const {data,error}=await db.from("payment_settings").select("qr_image_url").eq("id",1).maybeSingle();
+  if(error)throw error;
+  const qr=data?.qr_image_url||"";
+  node.innerHTML=qr
+   ? "<b>Thông tin thanh toán HNShop</b><img class='topup-payment-qr' src='"+safe(qr)+"' alt='QR chuyển khoản dùng chung với đơn mua hàng'><small>Quét mã QR này để nạp ví hoặc thanh toán đơn mua hàng.</small>"
+   : "<b>Thông tin thanh toán HNShop</b><p>Chưa có ảnh QR thanh toán. Vui lòng liên hệ shop trước khi chuyển khoản.</p>";
+ }catch(e){node.textContent="Không tải được thông tin thanh toán: "+(e.message||e);}
+}
 async function loadMyWalletTopups(){
  const list=document.getElementById("myTopups");
  if(!currentUser){list.textContent="Đăng nhập để xem yêu cầu nạp.";return;}
@@ -563,6 +575,7 @@ function openGame(type){
  gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
  refreshGameWallet();
  loadMyWalletTopups();
+ loadTopupPaymentInfo();
  loadShopGameConfig();
 }
 document.querySelectorAll("[data-game]").forEach(btn=>btn.addEventListener("click",()=>openGame(btn.dataset.game)));
