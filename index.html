@@ -311,6 +311,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="branding">Cài đặt cửa hàng</button>
 <button data-page="sellStaff" id="sellStaffNav">Quản lý Sellkey</button>
 <button data-page="sellerPermissions" id="sellerPermissionsNav">Phân quyền Seller</button>
+<button data-page="gameSettings" id="gameSettingsNav">Vòng quay & Túi mù</button>
 <button data-page="sellOrders" id="sellOrdersNav" class="hidden">Đơn hàng Shop</button>
 <button data-page="sellKeyStock" id="sellKeyStockNav" class="hidden">Kho key sản phẩm</button>
 <button data-page="sellMonitor" id="sellMonitorNav" class="hidden">Theo dõi hệ thống & khách mua key</button>
@@ -520,6 +521,31 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <p id="sellerPermissionsMessage" aria-live="polite"></p>
 <div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th></tr></thead>
 <tbody id="sellerPermissionsRows"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div></div></section>
+<section id="gameSettings" class="page hidden">
+<h2>Cấu hình Vòng quay & Túi mù</h2>
+<div class="panel">
+<p>Điều chỉnh tỷ lệ phần thưởng. Tổng tỷ lệ phải đúng 100%. Thiết lập áp dụng cho cả Vòng quay và Túi mù.</p>
+<div class="form-grid">
+<div><label>Key 1 ngày (%)</label><input id="gameOdds1" type="number" min="0" max="100" step="0.1" value="84"></div>
+<div><label>Key 3 ngày (%)</label><input id="gameOdds3" type="number" min="0" max="100" step="0.1" value="6"></div>
+<div><label>Key 7 ngày (%)</label><input id="gameOdds7" type="number" min="0" max="100" step="0.1" value="3"></div>
+<div><label>Key 30 ngày (%)</label><input id="gameOdds30" type="number" min="0" max="100" step="0.1" value="1"></div>
+<div><label>Tiền ví 20.000 đ (%)</label><input id="gameOdds20" type="number" min="0" max="100" step="0.1" value="4"></div>
+<div><label>Tiền ví 50.000 đ (%)</label><input id="gameOdds50" type="number" min="0" max="100" step="0.1" value="2"></div>
+</div>
+<p id="gameOddsTotal" aria-live="polite">Tổng: 100%</p>
+<hr>
+<h3>Ảnh Vòng quay</h3>
+<p>Chọn ảnh nền riêng cho vòng quay (JPG, PNG hoặc WebP, tối đa 5 MB).</p>
+<input id="gameWheelImage" type="file" accept="image/*">
+<img id="gameWheelPreview" alt="Xem trước ảnh vòng quay" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
+<h3 style="margin-top:18px">Ảnh Túi mù</h3>
+<p>Chọn ảnh minh họa túi mù.</p>
+<input id="gameBlindImage" type="file" accept="image/*">
+<img id="gameBlindPreview" alt="Xem trước ảnh túi mù" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
+<div class="actions"><button id="saveGameSettings" type="button">Lưu cấu hình</button><button id="refreshGameSettings" class="secondary" type="button">Tải lại</button></div>
+<p id="gameSettingsMessage" aria-live="polite"></p>
+</div></section>
 <section id="sellMonitor" class="page hidden">
 <h2>Tổng quan</h2>
 <div class="actions" style="margin-bottom:14px">
@@ -785,6 +811,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'branding') await loadShopBrand();
    if(btn.dataset.page === 'sellStaff') await loadSellStaff();
    if(btn.dataset.page === 'sellerPermissions') await loadSellerPermissions();
+   if(btn.dataset.page === 'gameSettings') await loadGameSettings();
    if(btn.dataset.page === 'sellMonitor') await loadSellMonitor();
    if(btn.dataset.page === 'sellOrders') await loadSellerOrders();
    if(btn.dataset.page === 'sellKeyStock') await loadSellerKeyStock();
@@ -2093,6 +2120,59 @@ $('adminDiagnosticsBtn').onclick=async()=>{
 
 /* KHỞI ĐỘNG */
 checkSession();
+
+// ADMIN: cấu hình tỷ lệ và ảnh trò chơi
+let gameConfigCache={wheel_image_url:'',blindbox_image_url:''};
+function readGameOdds(){
+ return [
+  {id:'key1',type:'key',days:1,value:0,label:'Key 1 ngày',weight:Number($('gameOdds1').value)},
+  {id:'key3',type:'key',days:3,value:0,label:'Key 3 ngày',weight:Number($('gameOdds3').value)},
+  {id:'key7',type:'key',days:7,value:0,label:'Key 7 ngày',weight:Number($('gameOdds7').value)},
+  {id:'key30',type:'key',days:30,value:0,label:'Key 30 ngày',weight:Number($('gameOdds30').value)},
+  {id:'wallet20',type:'wallet',days:0,value:20000,label:'Tiền ví 20.000 đ',weight:Number($('gameOdds20').value)},
+  {id:'wallet50',type:'wallet',days:0,value:50000,label:'Tiền ví 50.000 đ',weight:Number($('gameOdds50').value)}
+ ];
+}
+function updateGameOddsTotal(){
+ const vals=readGameOdds().map(x=>x.weight);
+ const total=vals.reduce((a,b)=>a+b,0);
+ $('gameOddsTotal').textContent='Tổng: '+(Number.isFinite(total)?total.toFixed(1):'không hợp lệ')+'%';
+ $('gameOddsTotal').style.color=Math.abs(total-100)<0.0001?'#176b37':'#bd3545';
+ return Math.abs(total-100)<0.0001&&vals.every(x=>Number.isFinite(x)&&x>=0&&x<=100);
+}
+async function loadGameSettings(){
+ $('gameSettingsMessage').textContent='Đang tải cấu hình...';
+ const {data,error}=await db.rpc('admin_get_shop_game_config');
+ if(error)throw error;
+ const cfg=data||{};
+ const odds=Array.isArray(cfg.prizes)?cfg.prizes:[];
+ const map={key1:'gameOdds1',key3:'gameOdds3',key7:'gameOdds7',key30:'gameOdds30',wallet20:'gameOdds20',wallet50:'gameOdds50'};
+ odds.forEach(x=>{if(map[x.id]&&$(map[x.id]))$(map[x.id]).value=Number(x.weight||0)/100;});
+ gameConfigCache={wheel_image_url:cfg.wheel_image_url||'',blindbox_image_url:cfg.blindbox_image_url||''};
+ [['gameWheelPreview',gameConfigCache.wheel_image_url],['gameBlindPreview',gameConfigCache.blindbox_image_url]].forEach(([id,url])=>{const im=$(id);im.src=url;im.style.display=url?'block':'none';});
+ updateGameOddsTotal();$('gameSettingsMessage').textContent='Đã tải cấu hình hiện tại.';
+}
+['gameOdds1','gameOdds3','gameOdds7','gameOdds30','gameOdds20','gameOdds50'].forEach(id=>$(id).addEventListener('input',updateGameOddsTotal));
+$('gameWheelImage').addEventListener('change',()=>{const f=$('gameWheelImage').files[0];if(f){$('gameWheelPreview').src=URL.createObjectURL(f);$('gameWheelPreview').style.display='block';}});
+$('gameBlindImage').addEventListener('change',()=>{const f=$('gameBlindImage').files[0];if(f){$('gameBlindPreview').src=URL.createObjectURL(f);$('gameBlindPreview').style.display='block';}});
+$('refreshGameSettings').onclick=()=>loadGameSettings().catch(e=>$('gameSettingsMessage').textContent=e.message||String(e));
+$('saveGameSettings').onclick=async()=>{
+ const btn=$('saveGameSettings');
+ try{
+  if(!updateGameOddsTotal())throw Error('Tổng tỷ lệ phải đúng 100%.');
+  btn.disabled=true;$('gameSettingsMessage').textContent='Đang lưu...';
+  const wheelFile=$('gameWheelImage').files[0],blindFile=$('gameBlindImage').files[0];
+  if(wheelFile)gameConfigCache.wheel_image_url=await uploadImage(wheelFile);
+  if(blindFile)gameConfigCache.blindbox_image_url=await uploadImage(blindFile);
+  const payload={prizes:readGameOdds().map(x=>({...x,weight:Math.round(x.weight*100)})),wheel_image_url:gameConfigCache.wheel_image_url,blindbox_image_url:gameConfigCache.blindbox_image_url};
+  const {data,error}=await db.rpc('admin_save_shop_game_config',{p_config:payload});
+  if(error)throw error;
+  $('gameWheelImage').value='';$('gameBlindImage').value='';
+  $('gameSettingsMessage').textContent='Đã lưu tỷ lệ và ảnh. Shop sẽ dùng cấu hình mới khi tải lại trang.';
+ }catch(e){$('gameSettingsMessage').textContent=e.message||String(e);}
+ finally{btn.disabled=false;}
+};
+
 </script>
 </body>
 </html>
