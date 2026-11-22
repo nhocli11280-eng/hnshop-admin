@@ -1562,7 +1562,18 @@ $('refreshCustomerAccess').onclick=()=>loadCustomerAccess().catch(fail);
 /* QUẢN LÝ NHÂN VIÊN SELLKEY - thao tác tài khoản qua Edge Function dùng service role phía máy chủ */
 async function manageSellAccount(payload) {
  const {data,error}=await db.functions.invoke('admin-manage-sell',{body:payload});
- if(error) throw error;
+ if(error) {
+  let detail=error.message||'Lỗi gọi Edge Function.';
+  try {
+   const response=error.context;
+   if(response && typeof response.clone==='function') {
+    const body=await response.clone().json();
+    if(body?.error) detail=body.error;
+    else detail=JSON.stringify(body);
+   }
+  } catch(_) {}
+  throw Error(detail);
+ }
  if(data?.error) throw Error(data.error);
  return data;
 }
