@@ -1360,7 +1360,7 @@ async function loadOrders() {
    const c=people.find(p=>String(p.id)===String(x.customer_id));
    return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-regular" data-order-id="${escapeHTML(x.id)}">Chi tiết</button><button type="button" data-order-action="status-regular" data-order-id="${escapeHTML(x.id)}">Đổi trạng thái</button></div></td></tr>`;
   }
-  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-shop" data-order-id="${escapeHTML(x.id)}">Chi tiết</button>${x.status==='pending'? `<button type="button" data-order-action="confirm-shop" data-order-id="${escapeHTML(x.id)}">Xác nhận đã nhận tiền</button>`:''}</div></td></tr>`;
+  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-shop" data-order-id="${escapeHTML(x.id)}">Chi tiết</button>${x.status==='pending'? `<button type="button" data-order-action="confirm-shop" data-order-id="${escapeHTML(x.id)}">Xác nhận đã nhận tiền</button><button type="button" data-order-action="cancel-shop" data-order-id="${escapeHTML(x.id)}">Hủy đơn</button>`:''}</div></td></tr>`;
  }).join('');
  const errorHtml=errors.length?`<tr><td colspan="6" style="color:#ffb1b1">Lỗi tải một phần dữ liệu: ${escapeHTML(errors.join(' | '))}</td></tr>`:'';
  $('orderRows').innerHTML=(rowsHtml||'<tr><td colspan="6">Chưa có đơn hàng.</td></tr>')+errorHtml;
@@ -1374,6 +1374,7 @@ $('orderRows').addEventListener('click', async event => {
  try {
   if(action==='detail-shop') await window.showStoreOrder(id);
   else if(action==='confirm-shop') await window.confirmStoreOrder(id);
+  else if(action==='cancel-shop') await window.cancelStoreOrder(id);
   else if(action==='detail-regular') await window.showOrder(id);
   else if(action==='status-regular') await window.changeStatus(id);
  } catch(e) {
@@ -1604,7 +1605,7 @@ async function loadStoreOrders() {
     <td>${date(x.created_at)}</td>
     <td><div class="actions">
      <button onclick="showStoreOrder('${escapeHTML(x.id)}')">Chi tiết</button>
-     ${x.status === 'pending' ? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button>` : ''}
+     ${x.status === 'pending' ? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button><button onclick="cancelStoreOrder('${escapeHTML(x.id)}')">Hủy đơn</button>` : ''}
     </div></td>
    </tr>`).join('') : '<tr><td colspan="6">Chưa có đơn hàng cửa hàng.</td></tr>';
   $('storeOrderMessage').textContent = 'Đang hiển thị ' + rows.length + ' đơn gần nhất.';
@@ -1633,6 +1634,18 @@ window.showStoreOrder = async id => {
  } catch(e) {
   $('storeOrderDetail').textContent = 'Lỗi: ' + (e.message || e);
  }
+};
+window.cancelStoreOrder = async id => {
+ if(currentUserRole!=='admin'){alert('Chỉ Admin được hủy đơn hàng.');return;}
+ if(!confirm('Bạn chắc chắn muốn HỦY đơn Shop này? Đơn đã hủy sẽ không thể xác nhận thanh toán và cấp key.')) return;
+ try {
+  const {data,error}=await db.rpc('admin_cancel_store_order',{p_order_id:id});
+  if(error) throw error;
+  if(data!==true) throw Error('Máy chủ chưa xác nhận hủy đơn.');
+  message('Đã hủy đơn hàng thành công.');
+  await Promise.all([loadOrders(),loadStoreOrders(),loadDashboard()]);
+  await showStoreOrder(id);
+ } catch(e){fail(e);}
 };
 window.confirmStoreOrder = async id => {
  if(!confirm('Bạn đã kiểm tra app MB Bank và chắc chắn đã nhận đủ tiền cho đơn này?')) return;
