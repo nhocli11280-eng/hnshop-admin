@@ -36,9 +36,10 @@ Deno.serve(async (req) => {
     const action = String(body.action || "");
 
     if (action === "create") {
-      const email = String(body.email || "").trim().toLowerCase();
+      const username = String(body.username || "").trim().toLowerCase();
+      const email = username + "@sell.hnshop.invalid";
       const password = String(body.password || "");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply({ error: "Email không hợp lệ." }, 400);
+      if (!/^[a-z0-9._-]{3,32}$/.test(username)) return reply({ error: "Tên đăng nhập phải dài 3–32 ký tự, chỉ gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang." }, 400);
       if (password.length < 8) return reply({ error: "Mật khẩu phải có ít nhất 8 ký tự." }, 400);
       const { data, error } = await admin.auth.admin.createUser({
         email, password, email_confirm: true, app_metadata: { role: "sell" }, user_metadata: { username },
