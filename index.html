@@ -756,7 +756,7 @@ async function loadDashboard() {
   safe('Sản phẩm',db.from('products').select('id,is_active')),
   safe('Danh mục',db.from('categories').select('id')),
   safe('Đơn hàng thường',db.from('orders').select('id,total,status,created_at,customer_id').order('created_at',{ascending:false})),
-  safe('Khách hàng',db.from('customers').select('id')),
+  safe('Khách hàng Shop',db.rpc('admin_list_shop_customers')),
   safe('Kho key',db.from('product_keys').select('id,status')),
   safe('Đơn hàng Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}))
  ]);
