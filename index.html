@@ -698,6 +698,8 @@ async function verifyAdmin() {
   $('sellMonitor').classList.add('hidden');
   $('sellStaffNav').classList.remove('hidden');
   $('sellerPermissionsNav').classList.remove('hidden');
+  $('sellOrdersNav').classList.add('hidden');
+  $('sellKeyStockNav').classList.add('hidden');
   await loadDashboard();
   subscribeAdminRealtime();
   startDashboardAutoRefresh();
@@ -1859,7 +1861,7 @@ window.setSellerPermission=async(userId,permission,enabled)=>{
 $('refreshSellerPermissions').onclick=()=>loadSellerPermissions().catch(e=>$('sellerPermissionsMessage').textContent=e.message||String(e));
 
 /* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
-async /* TỔNG QUAN SELL: CHỈ ĐỌC, KHÔNG CÓ THAO TÁC CHỈNH SỬA */
+/* TỔNG QUAN SELL: CHỈ ĐỌC, KHÔNG CÓ THAO TÁC CHỈNH SỬA */
 async function loadSellMonitor(){
  const ids=['sellStatProducts','sellStatActiveProducts','sellStatCategories','sellStatOrders','sellStatPendingOrders','sellStatRevenue','sellStatCustomers','sellStatAvailableKeys','sellStatDeliveredKeys','sellStatStoreOrders'];
  ids.forEach(id=>{if($(id))$(id).textContent='…';});
