@@ -320,6 +320,19 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <tbody id="customerRows"></tbody>
 </table>
 </div>
+</sectition id="storeOrders" class="page hidden">
+<h2>Đơn hàng cửa hàng</h2>
+<div class="panel">
+<button id="refreshStoreOrders" class="secondary">Làm mới đơn hàng</button>
+<p id="storeOrderMessage" aria-live="polite"></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mã đơn</th><th>Tổng tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+<tbody id="storeOrderRows"><tr><td colspan="6">Đang tải...</td></tr></tbody>
+</table></div>
+</div>
+<div class="panel" id="storeOrderDetail">Chọn một đơn để xem chi tiết.</div>
+</section>
+
 <section id="payment" class="page hidden">
 <h2>Cài đặt thanh toán</h2>
 <div class="panel">
@@ -510,10 +523,11 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'products') await loadProducts();
    if(btn.dataset.page === 'categories') await loadCategories();
    if(btn.dataset.page === 'banners') await loadBanners();
-   if(btn.dataset.page === 'orders') { await Promise.allSettled([loadOrders(), loadStoreOrders()]); }
+   if(btn.dataset.page === 'orders') { await loadOrders(); await loadStoreOrders(); }
    if(btn.dataset.page === 'customers') await loadCustomers();
    if(btn.dataset.page === 'customerAccess') await loadCustomerAccess();
    if(btn.dataset.page === 'keys') await loadKeyProducts();
+   if(btn.dataset.page === 'storeOrders') await loadStoreOrders();
    if(btn.dataset.page === 'payment') await loadPaymentSettings();
    if(btn.dataset.page === 'branding') await loadShopBrand();
   } catch(e) {
@@ -1031,8 +1045,9 @@ async function loadOrders() {
       : '<tr><td colspan="6">Chưa có đơn hàng trong bảng orders. Đơn mua key trên Shop nằm ở mục “Đơn hàng cửa hàng”.</td></tr>';
   } catch(e) {
     console.error('loadOrders error:', e);
-    body.innerHTML = '<tr><td colspan="6">Không tải được đơn cũ: ' +
+    body.innerHTML = '<tr><td colspan="6">Không tải được đơn hàng: ' +
       escapeHTML(e.message || String(e)) + '</td></tr>';
+    throw e;
   }
 }
 
@@ -1220,8 +1235,7 @@ async function loadStoreOrders() {
    </tr>`).join('') : '<tr><td colspan="6">Chưa có đơn hàng cửa hàng.</td></tr>';
   $('storeOrderMessage').textContent = 'Đang hiển thị ' + rows.length + ' đơn gần nhất.';
  } catch(e) {
-  $('storeOrderRows').innerHTML = '<tr><td colspan="6">Không tải được đơn Shop: ' + escapeHTML(e.message || String(e)) + '</td></tr>';
-  $('storeOrderMessage').textContent = 'Lỗi tải đơn Shop: ' + (e.message || e);
+  $('storeOrderMessage').textContent = 'Lỗi tải đơn: ' + (e.message || e);
  }
 }
 window.showStoreOrder = async id => {
