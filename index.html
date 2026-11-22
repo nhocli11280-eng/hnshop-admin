@@ -588,20 +588,32 @@ async function verifyAdmin() {
 
 $('loginBtn').onclick = async () => {
  const btn = $('loginBtn');
+ let timer;
  try {
   btn.disabled = true;
-  $('loginMsg').textContent = 'Đang đăng nhập...';
+  $('loginMsg').textContent = 'Đang kiểm tra tài khoản...';
 
-  const {error} = await db.auth.signInWithPassword({
+  const loginPromise = db.auth.signInWithPassword({
    email: $('email').value.trim().includes('@') ? $('email').value.trim() : $('email').value.trim().toLowerCase() + '@sell.hnshop.invalid',
    password: $('password').value
   });
+  const result = await Promise.race([
+   loginPromise,
+   new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Kết nối đăng nhập quá lâu. Hãy kiểm tra mạng rồi thử lại.')), 15000); })
+  ]);
+  clearTimeout(timer);
+  if(result.error) throw result.error;
 
-  if(error) throw error;
-  await verifyAdmin();
+  $('loginMsg').textContent = 'Đã xác thực. Đang mở màn hình Seller...';
+  const verifyPromise = verifyAdmin();
+  await Promise.race([
+   verifyPromise,
+   new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Đã xác thực nhưng tải thông tin Seller quá lâu. Hãy tải lại trang.')), 15000); })
+  ]);
  } catch(e) {
   $('loginMsg').textContent = e.message || String(e);
  } finally {
+  clearTimeout(timer);
   btn.disabled = false;
  }
 };
