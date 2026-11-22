@@ -1936,27 +1936,41 @@ async function loadSellerOrders(){
  $('sellerOrdersMessage').textContent='Đang tải đơn Shop...'; $('sellerOrdersList').innerHTML='Đang tải...';
  try{
   const {data,error}=await db.rpc('sell_list_shop_orders'); if(error) throw error;
-  const rows=Array.isArray(data)?data:[];
+  const rows=Array.isArray(data)?data:(typeof data==='string'?JSON.parse(data||'[]'):[]);
   $('sellerOrdersList').innerHTML=rows.length?rows.map(o=>{
    const items=Array.isArray(o.items)?o.items:[];
+   const pending=String(o.status||'').trim().toLowerCase()==='pending';
+   const canSell=!!currentSellerPermissions.sell_keys;
    return '<div class="panel" style="margin-top:12px"><b>Mã đơn: '+escapeHTML(o.id)+'</b>'+
     '<p>Tổng tiền: '+money(o.total)+' · Trạng thái: '+escapeHTML(o.status||'')+'</p>'+
     '<p>Nội dung chuyển khoản: '+escapeHTML(o.transfer_note||'—')+'</p><p>Ngày tạo: '+date(o.created_at)+'</p>'+
     '<div>'+items.map(i=>'<p>'+escapeHTML(i.product_name)+' · '+escapeHTML(i.package_name||'Gói key')+' × '+escapeHTML(i.quantity)+' · '+money(i.price)+'</p>').join('')+'</div>'+
-    (currentSellerPermissions.sell_keys&&o.status==='pending'?'<button type="button" onclick="sellerConfirmShopOrder(\''+escapeHTML(o.id)+'\')">Xác nhận thanh toán & cấp key</button>':'')+'</div>';
+    (canSell&&pending?'<button type="button" class="seller-confirm-order" data-order-id="'+escapeHTML(o.id)+'">Xác nhận thanh toán & cấp key</button>':'')+'</div>';
   }).join(''):'<p>Không có đơn hàng cần hiển thị.</p>';
-  $('sellerOrdersMessage').textContent=currentSellerPermissions.view_orders?'Có thể xem các đơn Shop.':'Chỉ hiển thị đơn chờ xác nhận để cấp key.';
- }catch(e){$('sellerOrdersList').textContent='Không tải được đơn hàng: '+(e.message||e);$('sellerOrdersMessage').textContent='Kiểm tra quyền Xem đơn hàng hoặc Bán key.';}
+  $('sellerOrdersMessage').textContent=currentSellerPermissions.view_orders?'Có thể xem các đơn Shop.':(currentSellerPermissions.sell_keys?'Chỉ hiển thị đơn chờ xác nhận để cấp key.':'Chưa được cấp quyền xem hoặc bán key.');
+ }catch(e){$('sellerOrdersList').textContent='Không tải được đơn hàng: '+(e.message||e);$('sellerOrdersMessage').textContent='Lỗi tải đơn: '+(e.message||e);}
 }
+$('sellerOrdersList').addEventListener('click',e=>{
+ const btn=e.target.closest('button.seller-confirm-order');
+ if(!btn)return;
+ const id=btn.getAttribute('data-order-id');
+ if(id) window.sellerConfirmShopOrder(id);
+});
 window.sellerConfirmShopOrder=async id=>{
- if(!currentSellerPermissions.sell_keys){alert('Admin chưa cấp quyền Bán key.');return;}
+ if(!currentSellerPermissions.sell_keys){$('sellerOrdersMessage').textContent='Admin chưa cấp quyền Bán key.';return;}
  if(!confirm('Chỉ xác nhận khi đã kiểm tra và chắc chắn nhận đủ tiền. Tiếp tục cấp key cho đơn này?'))return;
+ const btn=$('sellerOrdersList').querySelector('button[data-order-id="'+CSS.escape(String(id))+'"]');
+ if(btn){btn.disabled=true;btn.textContent='Đang xác nhận và cấp key...';}
+ $('sellerOrdersMessage').textContent='Đang xác nhận thanh toán và cấp key...';
  try{
   const {data,error}=await db.rpc('confirm_store_payment',{p_order_id:id}); if(error) throw error;
   if(data!==true) throw Error('Máy chủ chưa xác nhận hoàn tất cấp key.');
   $('sellerOrdersMessage').textContent='Đã xác nhận thanh toán và cấp key.';
   await loadSellerOrders(); await loadSellMonitor();
- }catch(e){$('sellerOrdersMessage').textContent='Không thể cấp key: '+(e.message||e);}
+ }catch(e){
+  $('sellerOrdersMessage').textContent='Không thể cấp key: '+(e.message||e);
+  if(btn){btn.disabled=false;btn.textContent='Thử xác nhận lại';}
+ }
 };
 $('refreshSellerOrders').onclick=()=>loadSellerOrders();
 
