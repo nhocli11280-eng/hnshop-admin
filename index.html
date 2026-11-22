@@ -752,14 +752,21 @@ async function loadDashboard() {
  const safe=async(label,query)=>{
   try{return await run(query);}catch(e){errors.push(label+': '+(e.message||String(e)));return [];}
  };
- const [p,c,o,u,k,so]=await Promise.all([
+ const [p,c,o,k,so]=await Promise.all([
   safe('Sản phẩm',db.from('products').select('id,is_active')),
   safe('Danh mục',db.from('categories').select('id')),
   safe('Đơn hàng thường',db.from('orders').select('id,total,status,created_at,customer_id').order('created_at',{ascending:false})),
-  safe('Khách hàng Shop',db.rpc('admin_list_shop_customers')),
   safe('Kho key',db.from('product_keys').select('id,status')),
   safe('Đơn hàng Shop',db.from('store_orders').select('id,customer_name,total,status,created_at').order('created_at',{ascending:false}))
  ]);
+ let customerCount=0;
+ try {
+  const {data:customerRows,error:customerError}=await db.rpc('admin_list_shop_customers');
+  if(customerError) throw customerError;
+  customerCount=Array.isArray(customerRows)?customerRows.length:0;
+ } catch(e) {
+  errors.push('Khách hàng Shop: '+(e.message||String(e)));
+ }
  $('statProducts').textContent=p.length;
  $('statActiveProducts').textContent=p.filter(x=>x.is_active!==false).length;
  $('statCategories').textContent=c.length;
@@ -771,7 +778,7 @@ async function loadDashboard() {
  const shopRevenue=so.filter(x=>String(x.status||'').toLowerCase()==='fulfilled')
   .reduce((sum,x)=>sum+Number(x.total||0),0);
  $('statRevenue').textContent=money(regularRevenue+shopRevenue);
- $('statCustomers').textContent=u.length;
+ $('statCustomers').textContent=customerCount;
  $('statAvailableKeys').textContent=k.filter(x=>x.status==='available').length;
  $('statDeliveredKeys').textContent=k.filter(x=>x.status==='delivered').length;
  $('statStoreOrders').textContent=so.length;
