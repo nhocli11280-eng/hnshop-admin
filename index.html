@@ -665,6 +665,7 @@ async function verifyAdmin() {
   $('sellMonitor').classList.add('hidden');
   $('sellStaffNav').classList.remove('hidden');
   await loadDashboard();
+  subscribeAdminRealtime();
  }
 }
 
@@ -799,6 +800,38 @@ async function loadDashboard() {
  if(errors.length)console.warn('Dashboard partial data:',errors);
 }
 $('refreshDashboard').onclick=()=>loadDashboard().catch(fail);
+
+/* TỰ ĐỘNG CẬP NHẬT ADMIN QUA SUPABASE REALTIME */
+let adminRealtimeChannel = null;
+let adminRealtimeRefreshTimer = null;
+function subscribeAdminRealtime() {
+ if(adminRealtimeChannel) return;
+ adminRealtimeChannel = db.channel('hnshop-admin-live')
+  .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleAdminRealtimeRefresh('orders'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'store_orders'},()=>scheduleAdminRealtimeRefresh('store_orders'))
+  .on('postgres_changes',{event:'*',schema:'public',table:'shop_customer_access'},()=>scheduleAdminRealtimeRefresh('shop_customer_access'))
+  .subscribe((status)=>{
+   if(status==='SUBSCRIBED') {
+    $('dashboardUpdated').textContent='Đang kết nối cập nhật tức thì';
+   } else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT') {
+    $('dashboardUpdated').textContent='Realtime chưa kết nối; hãy kiểm tra cấu hình Supabase';
+   }
+  });
+}
+function scheduleAdminRealtimeRefresh(table) {
+ clearTimeout(adminRealtimeRefreshTimer);
+ adminRealtimeRefreshTimer=setTimeout(async()=>{
+  try {
+   await loadDashboard();
+   const activePage=document.querySelector('.page:not(.hidden)')?.id;
+   if(activePage==='orders') await loadOrders();
+   if(activePage==='storeOrders') await loadStoreOrders();
+   if(activePage==='customers') await loadCustomers();
+   if(activePage==='customerAccess') await loadCustomerAccess();
+   $('dashboardUpdated').textContent='Vừa tự cập nhật ('+table+') · '+new Date().toLocaleTimeString('vi-VN');
+  } catch(e) { console.error('Realtime refresh:',e); }
+ },500);
+}
 
 /* DANH MỤC */
 async function loadCategories() {
