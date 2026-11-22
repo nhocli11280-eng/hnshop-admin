@@ -501,14 +501,40 @@ async function loadTopupPaymentInfo(){
    : "<b>Thông tin thanh toán HNShop</b><p>Chưa có ảnh QR thanh toán. Vui lòng liên hệ shop trước khi chuyển khoản.</p>";
  }catch(e){node.textContent="Không tải được thông tin thanh toán: "+(e.message||e);}
 }
+let topupCountdownInterval=null;
+function renderTopupCountdown(expiresAt){
+ if(topupCountdownInterval)clearInterval(topupCountdownInterval);
+ const tick=()=>{
+  const node=document.getElementById("topupCountdown");
+  if(!node){clearInterval(topupCountdownInterval);topupCountdownInterval=null;return;}
+  const left=Math.max(0,new Date(expiresAt).getTime()-Date.now());
+  node.textContent=String(Math.floor(left/60000)).padStart(2,"0")+":"+String(Math.floor(left%60000/1000)).padStart(2,"0");
+  const note=document.getElementById("topupCountdownNote");
+  if(note)note.textContent=left>0?"Vui lòng chuyển khoản trong 10 phút. Sau khi chuyển, đơn vẫn chờ Admin xác nhận.":"Đã hết 10 phút hiển thị. Nếu đã chuyển khoản, đơn vẫn chờ Admin kiểm tra.";
+  if(left<=0){clearInterval(topupCountdownInterval);topupCountdownInterval=null;}
+ };
+ tick();topupCountdownInterval=setInterval(tick,1000);
+}
+async function showTopupPaymentOrder(order){
+ const node=document.getElementById("topupPaymentInfo");
+ const {data,error}=await db.from("payment_settings").select("qr_image_url").eq("id",1).maybeSingle();
+ if(error)throw error;
+ const qr=data?.qr_image_url||"";
+ node.innerHTML="<b>Đơn nạp ví #"+safe(order.id)+" · "+moneyVND(order.amount)+"</b>"+
+  (qr?"<img class='topup-payment-qr' src='"+safe(qr)+"' alt='QR thanh toán HNShop'>":"<p>Admin chưa cài ảnh QR thanh toán.</p>")+
+  "<small>Nội dung chuyển khoản bắt buộc:</small><div class='transfer-note'>"+safe(order.transfer_note||"")+"</div>"+
+  "<div class='payment-countdown'><span>Thời gian thanh toán còn lại</span><strong id='topupCountdown'>10:00</strong><small id='topupCountdownNote'>Vui lòng chuyển khoản trong 10 phút.</small></div>"+
+  "<small>Chuyển khoản xong, đơn sẽ xuất hiện trong Quản lý đơn hàng. Ví chỉ được cộng sau khi Admin xác nhận.</small>";
+ renderTopupCountdown(order.expires_at||new Date(new Date(order.created_at).getTime()+600000).toISOString());
+}
 async function loadMyWalletTopups(){
  const list=document.getElementById("myTopups");
  if(!currentUser){list.textContent="Đăng nhập để xem yêu cầu nạp.";return;}
  list.textContent="Đang tải yêu cầu nạp...";
  const {data,error}=await db.rpc("shop_list_my_wallet_topups");
  if(error){list.textContent="Chưa tải được lịch sử nạp: "+error.message;return;}
- const status={pending:"Đang chờ Admin xác nhận",approved:"Đã cộng tiền vào ví",rejected:"Đã từ chối"};
- list.innerHTML="<h4>Lịch sử nạp ví</h4>"+((data||[]).length?(data||[]).map(x=>"<div class='topup-history'><b>#"+x.id+" · "+moneyVND(x.amount)+"</b><span>"+safe(status[x.status]||x.status)+"</span><small>"+new Date(x.created_at).toLocaleString("vi-VN")+"</small>"+(x.note?"<small>Nội dung: "+safe(x.note)+"</small>":"")+(x.admin_note?"<small>Admin: "+safe(x.admin_note)+"</small>":"")+"</div>").join(""):"<p>Chưa có yêu cầu nạp nào.</p>");
+ const rows=data||[],status={pending:"Đang chờ Admin xác nhận",approved:"Đã cộng tiền vào ví",rejected:"Đã từ chối"};
+ list.innerHTML="<h4>Lịch sử nạp ví</h4>"+(rows.length?rows.map(x=>"<div class='topup-history'><b>#"+x.id+" · "+moneyVND(x.amount)+"</b><span>"+safe(status[x.status]||x.status)+"</span><small>"+new Date(x.created_at).toLocaleString("vi-VN")+"</small><small>Nội dung CK: "+safe(x.transfer_note||"")+"</small>"+(x.note?"<small>Ghi chú: "+safe(x.note)+"</small>":"")+(x.admin_note?"<small>Admin: "+safe(x.admin_note)+"</small>":"")+"</div>").join(""):"<p>Chưa có yêu cầu nạp nào.</p>");
 }
 document.getElementById("submitTopup").addEventListener("click",async()=>{
  const btn=document.getElementById("submitTopup"),msg=document.getElementById("topupMessage");
@@ -520,9 +546,14 @@ document.getElementById("submitTopup").addEventListener("click",async()=>{
  try{
   const {data,error}=await db.rpc("shop_request_wallet_topup",{p_amount:amount,p_note:note});
   if(error)throw error;
-  msg.textContent="Đã gửi yêu cầu #"+data+". Ví chưa được cộng tiền; vui lòng chờ Admin xác nhận.";
+  msg.textContent="Đã tạo đơn nạp ví #"+data+". Hãy chuyển khoản đúng nội dung tự động bên dưới; ví chưa được cộng tiền.";
+  const {data:rows,error:detailError}=await db.rpc("shop_list_my_wallet_topups");
+  if(detailError)throw detailError;
+  const created=(rows||[]).find(x=>String(x.id)===String(data));
+  if(!created)throw new Error("Đơn đã tạo nhưng chưa tải được thông tin thanh toán.");
   document.getElementById("topupAmount").value="";
   document.getElementById("topupNote").value="";
+  await showTopupPaymentOrder(created);
   await loadMyWalletTopups();
  }catch(e){msg.textContent="Không gửi được: "+(e.message||e);}
  finally{btn.disabled=false;}
