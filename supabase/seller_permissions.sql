@@ -59,7 +59,7 @@ begin
   if coalesce(auth.jwt()->'app_metadata'->>'role','') <> 'admin' then
     raise exception 'Chỉ Admin được cấp hoặc thu hồi quyền';
   end if;
-  if p_permission not in ('key_stock','sell_keys','view_orders') then
+  if p_permission is null or p_permission not in ('key_stock','sell_keys','view_orders') then
     raise exception 'Loại quyền không hợp lệ';
   end if;
 
