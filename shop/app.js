@@ -529,12 +529,13 @@ async function showTopupPaymentOrder(order){
 }
 async function loadMyWalletTopups(){
  const list=document.getElementById("myTopups");
- if(!currentUser){list.textContent="Đăng nhập để xem yêu cầu nạp.";return;}
- list.textContent="Đang tải yêu cầu nạp...";
+ if(!currentUser){list.textContent="Đăng nhập để xem yêu cầu nạp.";return [];}
+ list.textContent="Đang tải lịch sử nạp...";
  const {data,error}=await db.rpc("shop_list_my_wallet_topups");
- if(error){list.textContent="Chưa tải được lịch sử nạp: "+error.message;return;}
+ if(error){list.textContent="Không tải được lịch sử nạp: "+error.message;return [];}
  const rows=data||[],status={pending:"Đang chờ Admin xác nhận",approved:"Đã cộng tiền vào ví",rejected:"Đã từ chối"};
- list.innerHTML="<h4>Lịch sử nạp ví</h4>"+(rows.length?rows.map(x=>"<div class='topup-history'><b>#"+x.id+" · "+moneyVND(x.amount)+"</b><span>"+safe(status[x.status]||x.status)+"</span><small>"+new Date(x.created_at).toLocaleString("vi-VN")+"</small><small>Nội dung CK: "+safe(x.transfer_note||"")+"</small>"+(x.note?"<small>Ghi chú: "+safe(x.note)+"</small>":"")+(x.admin_note?"<small>Admin: "+safe(x.admin_note)+"</small>":"")+"</div>").join(""):"<p>Chưa có yêu cầu nạp nào.</p>");
+ list.innerHTML="<h4>Lịch sử nạp ví</h4>"+(rows.length?rows.map(x=>"<div class='topup-history'><b>Đơn nạp ví #"+x.id+" · "+moneyVND(x.amount)+"</b><span>"+safe(status[x.status]||x.status)+"</span><small>"+new Date(x.created_at).toLocaleString("vi-VN")+"</small><small>Nội dung CK: "+safe(x.transfer_note||"")+"</small>"+(x.note?"<small>Ghi chú: "+safe(x.note)+"</small>":"")+(x.admin_note?"<small>Admin: "+safe(x.admin_note)+"</small>":"")+"</div>").join(""):"<p>Chưa có đơn nạp ví. Nhập số tiền và bấm TẠO ĐƠN để nhận QR, nội dung CK và đồng hồ 10 phút.</p>");
+ return rows;
 }
 document.getElementById("submitTopup").addEventListener("click",async()=>{
  const btn=document.getElementById("submitTopup"),msg=document.getElementById("topupMessage");
@@ -605,8 +606,11 @@ function openGame(type){
  document.getElementById("blindStage").querySelector(".blindbox-large").classList.remove("opening");
  gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
  refreshGameWallet();
- loadMyWalletTopups();
- loadTopupPaymentInfo();
+ loadMyWalletTopups().then(rows=>{
+  const pending=(rows||[]).find(x=>x.status==="pending");
+  if(pending) showTopupPaymentOrder(pending).catch(e=>{document.getElementById("topupPaymentInfo").textContent="Không tải được thông tin đơn nạp: "+(e.message||e);});
+  else loadTopupPaymentInfo();
+ });
  loadShopGameConfig();
 }
 document.querySelectorAll("[data-game]").forEach(btn=>btn.addEventListener("click",()=>openGame(btn.dataset.game)));
