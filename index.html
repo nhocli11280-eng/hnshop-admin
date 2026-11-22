@@ -181,6 +181,72 @@ tr:hover td{background:rgba(0,145,220,.055)}
  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
 
+
+/* SELL MONITOR: bố cục thống kê theo cột, chỉ đọc */
+#sellMonitor .panel{
+  border:1px solid rgba(71,190,255,.22);
+  border-radius:16px;
+  padding:20px;
+  background:linear-gradient(145deg,rgba(8,27,52,.96),rgba(5,16,34,.96));
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+  min-width:0;
+}
+#sellMonitor .panel h3{
+  color:#67ddff;
+  font-size:17px;
+  letter-spacing:.2px;
+  margin-bottom:16px;
+}
+#sellMonitor .stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+#sellMonitor .stat{
+  min-width:0;
+  padding:17px;
+  border:1px solid rgba(77,199,255,.25);
+  border-radius:12px;
+  background:linear-gradient(145deg,rgba(12,48,78,.9),rgba(8,29,54,.9));
+  color:#a9c9dc;
+  font-size:13px;
+}
+#sellMonitor .stat strong{
+  color:#f1fbff;
+  font-size:clamp(19px,2.2vw,27px);
+  overflow-wrap:anywhere;
+}
+#sellMonitor .table-wrap{
+  width:100%;
+  border:1px solid rgba(90,190,235,.18);
+  border-radius:11px;
+  background:rgba(3,14,29,.58);
+}
+#sellMonitor table{width:100%;min-width:700px;border-collapse:separate;border-spacing:0}
+#sellMonitor th{
+  position:sticky;top:0;
+  background:#103451;
+  color:#7fe4ff;
+  font-weight:700;
+  white-space:nowrap;
+}
+#sellMonitor td{color:#e1f1fb;vertical-align:middle}
+#sellMonitor tbody tr:nth-child(even){background:rgba(45,117,158,.10)}
+#sellMonitor tbody tr:hover{background:rgba(32,168,222,.12)}
+#sellMonitor th,#sellMonitor td{padding:13px 15px;border-bottom:1px solid rgba(105,180,220,.15)}
+#sellMonitor #sellPurchaseRows td:nth-child(n+2){font-variant-numeric:tabular-nums}
+#sellMonitor #sellPurchaseRows td:last-child{color:#70e6b4;font-weight:700;white-space:nowrap}
+#sellMonitor #sellCustomerMessage{color:#a9c9dc}
+@media(max-width:760px){
+  #sellMonitor .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  #sellMonitor .panel{padding:14px}
+  #sellMonitor .stat{padding:13px}
+}
+@media(max-width:380px){
+  #sellMonitor .stats{grid-template-columns:1fr 1fr}
+  #sellMonitor .stat strong{font-size:18px}
+}
+
 </style>
 </head>
 <body>
