@@ -33,7 +33,7 @@ begin
  if coalesce(auth.jwt()->'app_metadata'->>'role','')<>'admin' then raise exception 'Chỉ Admin được thay đổi cấu hình'; end if;
  if jsonb_typeof(p_config->'prizes')<>'array' then raise exception 'Danh sách tỷ lệ không hợp lệ'; end if;
  select coalesce(sum((x->>'weight')::numeric),0),count(*) into v_total,v_count from jsonb_array_elements(p_config->'prizes') x;
- if v_count<>6 or v_total<>10000 then raise exception 'Tổng tỷ lệ phải đúng 100%%'; end if;
+ if v_count<>6 or v_total<>10000 then raise exception 'Tổng tỷ lệ phải đúng 100'; end if;
  if exists(select 1 from jsonb_array_elements(p_config->'prizes') x where (x->>'weight') is null or (x->>'weight')::numeric<0 or (x->>'weight')::numeric>10000) then raise exception 'Tỷ lệ không hợp lệ'; end if;
  if exists(select 1 from jsonb_array_elements(p_config->'prizes') x where coalesce(x->>'id','') not in ('key1','key3','key7','key30','wallet20','wallet50')) then raise exception 'Loại phần thưởng không hợp lệ'; end if;
  insert into public.shop_game_config(id,prizes,wheel_image_url,blindbox_image_url,updated_at)
