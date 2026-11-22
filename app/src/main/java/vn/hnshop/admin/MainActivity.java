@@ -5,7 +5,9 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Environment;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.WebChromeClient;
@@ -14,21 +16,69 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import java.io.File;
+
 public class MainActivity extends Activity {
     private static final String ADMIN_URL = "https://nhocli11280-eng.github.io/hnshop-admin/";
     private WebView webView;
 
+    // Basic client-side hardening. This raises the effort required to tamper,
+    // but is not a substitute for server-side authorization or a trusted signature.
+    private boolean isDebugOrHookEnvironment() {
+        if (Debug.isDebuggerConnected() || Debug.waitingForDebugger()) return true;
+
+        String[] indicators = {
+            "/data/local/tmp/frida-server",
+            "/data/local/tmp/re.frida.server",
+            "/system/framework/XposedBridge.jar",
+            "/system/lib/libsubstrate.so",
+            "/system/lib64/libsubstrate.so"
+        };
+        for (String path : indicators) {
+            if (new File(path).exists()) return true;
+        }
+
+        String maps = readTextFile("/proc/self/maps");
+        String lower = maps.toLowerCase();
+        return lower.contains("frida") || lower.contains("xposed")
+                || lower.contains("substrate") || lower.contains("lsposed");
+    }
+
+    private String readTextFile(String path) {
+        try {
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.FileReader(path));
+            StringBuilder out = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) out.append(line).append('\n');
+            reader.close();
+            return out.toString();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (isDebugOrHookEnvironment()) {
+            Toast.makeText(this, "Phát hiện môi trường gỡ lỗi/can thiệp. Ứng dụng sẽ đóng.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        // Prevent screenshots and screen recording of the admin app.
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+
         webView = new WebView(this);
         setContentView(webView);
 
+        webView.setWebContentsDebuggingEnabled(false);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setDatabaseEnabled(true);
         webView.getSettings().setAllowFileAccess(false);
-        // Let the website's viewport and responsive CSS control the phone layout.
         webView.getSettings().setUseWideViewPort(true);
         webView.getSettings().setLoadWithOverviewMode(false);
         webView.getSettings().setSupportZoom(false);
@@ -73,16 +123,13 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState);
-        } else {
-            webView.loadUrl(ADMIN_URL);
-        }
+        if (savedInstanceState != null) webView.restoreState(savedInstanceState);
+        else webView.loadUrl(ADMIN_URL);
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        webView.saveState(outState);
+        if (webView != null) webView.saveState(outState);
         super.onSaveInstanceState(outState);
     }
 
