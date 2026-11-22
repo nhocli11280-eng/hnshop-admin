@@ -21,7 +21,7 @@ returns table(
 )
 language sql security definer set search_path=''
 as $$
- select t.id,t.amount,t.note,t.transfer_note,t.status,t.created_at,t.expires_at,t.admin_note
+ select t.id::bigint,t.amount::numeric,t.note::text,t.transfer_note::text,t.status::text,t.created_at::timestamptz,t.expires_at::timestamptz,t.admin_note::text
  from public.shop_wallet_topups t
  where t.user_id=auth.uid()
  order by t.created_at desc limit 30;
@@ -64,8 +64,8 @@ begin
  end if;
  return query
  select t.id,t.user_id,
-  coalesce(nullif(u.raw_user_meta_data->>'username',''),u.email,'Khách hàng'),
-  u.email,t.amount,t.note,t.status,t.created_at,t.admin_note,t.transfer_note,t.expires_at
+  coalesce(nullif(u.raw_user_meta_data->>'username',''),u.email::text,'Khách hàng')::text,
+  u.email::text,t.amount::numeric,t.note::text,t.status::text,t.created_at::timestamptz,t.admin_note::text,t.transfer_note::text,t.expires_at::timestamptz
  from public.shop_wallet_topups t
  join auth.users u on u.id=t.user_id
  order by case when t.status='pending' then 0 else 1 end,t.created_at desc
