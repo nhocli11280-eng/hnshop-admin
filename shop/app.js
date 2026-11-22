@@ -77,7 +77,7 @@ function render() {
       <div class="product-visual">
         <img src="${safe(p.image_url || "assets/product-aov.jpg")}"
              alt="${safe(p.name)}" loading="lazy">
-        <span class="game-icon">HN</span>
+        ${p.logo_url ? `<img class="product-logo" src="${safe(p.logo_url)}" alt="Logo ${safe(p.name)}" loading="lazy">` : '<span class="game-icon">HN</span>'}
       </div>
       <div class="product-info">
         <h3>${safe(p.name)}</h3>
@@ -101,7 +101,7 @@ async function loadProducts() {
   try {
     const [productResult, categoryResult, packageResult] = await Promise.all([
       db.from("products")
-        .select("id,name,description,detail,price,image_url,category_id,is_active,created_at")
+        .select("id,name,description,detail,price,image_url,logo_url,category_id,is_active,created_at")
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
 
