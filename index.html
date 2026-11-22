@@ -362,7 +362,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div><label>Tên sản phẩm</label><input id="pName"></div>
 <div><label>Giá</label><input id="pPrice" type="number" min="0" step="any"></div>
 <div><label>Danh mục</label><select id="pCategory"></select></div>
-<div><label for="pImage">Ảnh sản phẩm</label><input id="pImage" type="file" accept="image/*" style="display:block;width:100%;min-height:48px;padding:10px;cursor:pointer" aria-label="Chọn ảnh sản phẩm"><button type="button" id="chooseProductImage" class="secondary" style="margin-top:8px;min-height:44px;width:100%">Chọn ảnh từ điện thoại</button><small id="pImageName" style="display:block;margin-top:6px;color:#9bc6df">Chưa chọn ảnh</small></div>
+<div><label for="pImage">Ảnh sản phẩm</label><input id="pImage" name="product_image" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" style="display:block;width:100%;min-height:52px;padding:10px;cursor:pointer;touch-action:manipulation" aria-label="Chọn ảnh sản phẩm"><label for="pImage" class="secondary" style="display:flex;align-items:center;justify-content:center;margin-top:8px;min-height:48px;width:100%;border-radius:8px;cursor:pointer;touch-action:manipulation">Chạm để chọn ảnh từ điện thoại</label><small id="pImageName" style="display:block;margin-top:6px;color:#9bc6df">Chưa chọn ảnh</small></div>
 </div>
 <label>Mô tả ngắn</label>
 <textarea id="pDescription"></textarea>
@@ -994,11 +994,7 @@ $('cancelCategory').onclick = () => {
  $('categorySlug').value = '';
 };
 
-/* NÚT CHỌN ẢNH TƯƠNG THÍCH ANDROID */
-$('chooseProductImage').addEventListener('click', () => {
- const picker = $('pImage');
- if (picker) picker.click();
-});
+/* CẬP NHẬT TÊN ẢNH SAU KHI CHỌN TRÊN ĐIỆN THOẠI */
 $('pImage').addEventListener('change', () => {
  const file = $('pImage').files && $('pImage').files[0];
  $('pImageName').textContent = file ? file.name : 'Chưa chọn ảnh';
