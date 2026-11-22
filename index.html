@@ -186,7 +186,19 @@ tr:hover td{background:rgba(0,145,220,.055)}
  #orders #orderDetail{overflow-wrap:anywhere}
  .panel,.stat{box-shadow:0 5px 20px rgba(0,0,0,.22)}
 }
-@media(max-width:360px){
+@media(max-width:650px){
+  #storeOrders .table-wrap{overflow:visible!important}
+  #storeOrders table,#storeOrders tbody{display:block;width:100%;min-width:0}
+  #storeOrders thead{display:none}
+  #storeOrders tbody tr{display:block!important;width:100%;padding:12px 0;border-bottom:1px solid rgba(90,167,208,.28)}
+  #storeOrders tbody td{display:block!important;width:100%;min-width:0;padding:6px 5px;border:0;overflow-wrap:anywhere;white-space:normal}
+  #storeOrders tbody td:nth-child(1){font-weight:700;color:#75dfff}
+  #storeOrders tbody td:nth-child(2),#storeOrders tbody td:nth-child(3),#storeOrders tbody td:nth-child(4),#storeOrders tbody td:nth-child(5){display:inline-block!important;width:49%;vertical-align:top}
+  #storeOrders tbody td:nth-child(6){display:block!important;width:100%;padding-top:10px}
+  #storeOrders tbody td:nth-child(6) .actions{display:flex!important;flex-direction:column;gap:9px;width:100%}
+  #storeOrders tbody td:nth-child(6) button{display:block!important;width:100%;min-height:48px;flex:none;white-space:normal}
+ }
+ @media(max-width:360px){
  .stats{grid-template-columns:minmax(0,1fr)}
  header>div button{flex-basis:100%}
 }
@@ -1360,7 +1372,7 @@ async function loadOrders() {
    const c=people.find(p=>String(p.id)===String(x.customer_id));
    return `<tr><td>Thường · #${escapeHTML(x.id)}</td><td>${escapeHTML(c?.name||'')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-regular" data-order-id="${escapeHTML(x.id)}">Chi tiết</button><button type="button" data-order-action="status-regular" data-order-id="${escapeHTML(x.id)}">Đổi trạng thái</button></div></td></tr>`;
   }
-  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-shop" data-order-id="${escapeHTML(x.id)}">Chi tiết</button>${x.status==='pending'? `<button type="button" data-order-action="confirm-shop" data-order-id="${escapeHTML(x.id)}">Xác nhận đã nhận tiền</button><button type="button" data-order-action="cancel-shop" data-order-id="${escapeHTML(x.id)}">Hủy đơn</button>`:''}</div></td></tr>`;
+  return `<tr><td>Shop · #${escapeHTML(String(x.id).slice(0,8))}</td><td>${escapeHTML(x.customer_name||'Khách Shop')}</td><td>${money(x.total)}</td><td>${escapeHTML(x.status||'')}</td><td>${date(x.created_at)}</td><td><div class="actions"><button type="button" data-order-action="detail-shop" data-order-id="${escapeHTML(x.id)}">Chi tiết</button>${String(x.status||'').toLowerCase()==='pending'? `<button type="button" data-order-action="confirm-shop" data-order-id="${escapeHTML(x.id)}">Xác nhận đã nhận tiền</button><button type="button" data-order-action="cancel-shop" data-order-id="${escapeHTML(x.id)}">Hủy đơn</button>`:''}</div></td></tr>`;
  }).join('');
  const errorHtml=errors.length?`<tr><td colspan="6" style="color:#ffb1b1">Lỗi tải một phần dữ liệu: ${escapeHTML(errors.join(' | '))}</td></tr>`:'';
  $('orderRows').innerHTML=(rowsHtml||'<tr><td colspan="6">Chưa có đơn hàng.</td></tr>')+errorHtml;
@@ -1605,7 +1617,7 @@ async function loadStoreOrders() {
     <td>${date(x.created_at)}</td>
     <td><div class="actions">
      <button onclick="showStoreOrder('${escapeHTML(x.id)}')">Chi tiết</button>
-     ${x.status === 'pending' ? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button><button onclick="cancelStoreOrder('${escapeHTML(x.id)}')">Hủy đơn</button>` : ''}
+     ${String(x.status||'').toLowerCase() === 'pending' ? `<button onclick="confirmStoreOrder('${escapeHTML(x.id)}')">Xác nhận đã nhận tiền</button><button onclick="cancelStoreOrder('${escapeHTML(x.id)}')">Hủy đơn</button>` : ''}
     </div></td>
    </tr>`).join('') : '<tr><td colspan="6">Chưa có đơn hàng cửa hàng.</td></tr>';
   $('storeOrderMessage').textContent = 'Đang hiển thị ' + rows.length + ' đơn gần nhất.';
