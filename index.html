@@ -1529,7 +1529,7 @@ async function loadCustomers() {
  const body = $('customerRows');
  body.innerHTML = '<tr><td colspan="5">Đang tải danh sách tài khoản...</td></tr>';
  try {
-  const {data,error}=await db.rpc('admin_list_shop_customers');
+  const {data,error}=await db.rpc('sell_list_shop_customers');
   if(error) throw error;
   const rows=Array.isArray(data)?data:[];
   body.innerHTML=rows.length?rows.map(x=>`
@@ -1643,7 +1643,7 @@ async function loadSellMonitor(){
   $('sellCustomerMessage').textContent='Đang hiển thị '+rows.length+' tài khoản khách.';
  }catch(e){
   $('sellCustomerRows').innerHTML='<tr><td colspan="4">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
-  $('sellCustomerMessage').textContent='Nếu RPC hiện tại chỉ cho Admin, cần mở quyền đọc giới hạn cho Sellkey trong Supabase.';
+  $('sellCustomerMessage').textContent='Danh sách khách hàng chưa tải được. Vui lòng thử làm mới hoặc kiểm tra quyền Sell.';
  }
 }
 $('refreshSellErrors').onclick=()=>{$('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi.</li>';};
