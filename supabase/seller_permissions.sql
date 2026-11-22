@@ -205,7 +205,7 @@ as $$
 declare v_role text; v_allowed boolean := false;
 begin
   v_role:=coalesce(auth.jwt()->'app_metadata'->>'role','');
-  if v_role='sell' and old.status='available' and new.status='delivered' then
+  if v_role='sell' and new.status='delivered' and (tg_op='INSERT' or old.status is distinct from new.status) then
     select coalesce(p.can_sell_keys,false) into v_allowed
     from (select auth.uid() as user_id) me
     left join public.seller_permissions p on p.user_id=me.user_id;
@@ -219,7 +219,7 @@ $$;
 
 drop trigger if exists trg_guard_seller_key_delivery on public.product_keys;
 create trigger trg_guard_seller_key_delivery
-before update of status on public.product_keys
+before insert or update on public.product_keys
 for each row execute function public.guard_seller_key_delivery();
 
 revoke all on function public.admin_list_seller_permissions() from public;
