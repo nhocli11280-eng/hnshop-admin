@@ -48,6 +48,20 @@ Deno.serve(async (req) => {
       return reply({ user: { id: data.user.id, username } });
     }
 
+    if (action === "list") {
+      const all: Array<{ id: string; email?: string; disabled: boolean }> = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) return reply({ error: error.message }, 400);
+        for (const u of data.users) {
+          const role = u.app_metadata?.role;
+          if (role === "sell" || role === "disabled") all.push({ id: u.id, username: u.user_metadata?.username || "", disabled: role === "disabled" || Boolean(u.banned_until) });
+        }
+        if (data.users.length < 1000) break;
+      }
+      return reply({ users: all });
+    }
+
     const userId = String(body.user_id || "");
     if (!userId) return reply({ error: "Thiếu user_id." }, 400);
     const { data: found, error: getError } = await admin.auth.admin.getUserById(userId);
@@ -76,19 +90,6 @@ Deno.serve(async (req) => {
       return reply({ success: true });
     }
 
-    if (action === "list") {
-      const all: Array<{ id: string; email?: string; disabled: boolean }> = [];
-      for (let page = 1; page <= 20; page++) {
-        const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-        if (error) return reply({ error: error.message }, 400);
-        for (const u of data.users) {
-          const role = u.app_metadata?.role;
-          if (role === "sell" || role === "disabled") all.push({ id: u.id, username: u.user_metadata?.username || "", disabled: role === "disabled" || Boolean(u.banned_until) });
-        }
-        if (data.users.length < 1000) break;
-      }
-      return reply({ users: all });
-    }
     return reply({ error: "Action không hợp lệ." }, 400);
   } catch (error) {
     return reply({ error: error instanceof Error ? error.message : String(error) }, 500);
