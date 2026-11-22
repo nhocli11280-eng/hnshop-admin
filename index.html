@@ -312,6 +312,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="sellStaff" id="sellStaffNav">Quản lý Sellkey</button>
 <button data-page="sellerPermissions" id="sellerPermissionsNav">Phân quyền Seller</button>
 <button data-page="gameSettings" id="gameSettingsNav">Vòng quay & Túi mù</button>
+<button data-page="walletTopups" id="walletTopupsNav">Duyệt nạp ví</button>
 <button data-page="sellOrders" id="sellOrdersNav" class="hidden">Đơn hàng Shop</button>
 <button data-page="sellKeyStock" id="sellKeyStockNav" class="hidden">Kho key sản phẩm</button>
 <button data-page="sellMonitor" id="sellMonitorNav" class="hidden">Theo dõi hệ thống & khách mua key</button>
@@ -521,6 +522,14 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <p id="sellerPermissionsMessage" aria-live="polite"></p>
 <div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th></tr></thead>
 <tbody id="sellerPermissionsRows"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div></div></section>
+<section id="walletTopups" class="page hidden">
+<h2>Duyệt yêu cầu nạp ví</h2>
+<div class="panel">
+<p>Chỉ xác nhận khi Admin đã kiểm tra và nhận được tiền thật. Khi bấm xác nhận, hệ thống mới cộng số tiền vào ví khách.</p>
+<div class="actions"><button id="refreshWalletTopups" class="secondary" type="button">Làm mới yêu cầu</button><span id="walletTopupsMessage" aria-live="polite"></span></div>
+<div class="table-wrap"><table><thead><tr><th>Mã</th><th>Khách hàng</th><th>Số tiền</th><th>Nội dung giao dịch</th><th>Ngày gửi</th><th>Trạng thái / Xử lý</th></tr></thead>
+<tbody id="walletTopupRows"><tr><td colspan="6">Đang tải...</td></tr></tbody></table></div>
+</div></section>
 <section id="gameSettings" class="page hidden">
 <h2>Cấu hình Vòng quay & Túi mù</h2>
 <div class="panel">
@@ -812,6 +821,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'sellStaff') await loadSellStaff();
    if(btn.dataset.page === 'sellerPermissions') await loadSellerPermissions();
    if(btn.dataset.page === 'gameSettings') await loadGameSettings();
+   if(btn.dataset.page === 'walletTopups') await loadAdminWalletTopups();
    if(btn.dataset.page === 'sellMonitor') await loadSellMonitor();
    if(btn.dataset.page === 'sellOrders') await loadSellerOrders();
    if(btn.dataset.page === 'sellKeyStock') await loadSellerKeyStock();
@@ -2120,6 +2130,36 @@ $('adminDiagnosticsBtn').onclick=async()=>{
 
 /* KHỞI ĐỘNG */
 checkSession();
+
+
+/* ADMIN DUYỆT NẠP VÍ KHÁCH */
+async function loadAdminWalletTopups(){
+ const body=$('walletTopupRows'),msg=$('walletTopupsMessage');
+ body.innerHTML='<tr><td colspan="6">Đang tải...</td></tr>';msg.textContent='';
+ const {data,error}=await db.rpc('admin_list_shop_wallet_topups');
+ if(error)throw error;
+ const status={pending:'Đang chờ',approved:'Đã cộng ví',rejected:'Đã từ chối'};
+ body.innerHTML=(data||[]).length?(data||[]).map(x=>{
+  const actions=x.status==='pending'?'<div class="actions"><button type="button" data-topup-approve="'+x.id+'">Đã nhận tiền · Cộng ví</button><button type="button" class="danger" data-topup-reject="'+x.id+'">Từ chối</button></div>':'';
+  return '<tr><td>#'+x.id+'</td><td>'+escapeHtml(x.username||'Khách')+'<br><small>'+escapeHtml(x.email||'')+'</small></td><td>'+money(x.amount)+'</td><td>'+escapeHtml(x.note||'—')+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td><td>'+status[x.status]+'<br>'+actions+(x.admin_note?'<small>'+escapeHtml(x.admin_note)+'</small>':'')+'</td></tr>';
+ }).join(''):'<tr><td colspan="6">Chưa có yêu cầu nạp ví.</td></tr>';
+}
+$('refreshWalletTopups').onclick=()=>loadAdminWalletTopups().catch(e=>$('walletTopupsMessage').textContent=e.message||String(e));
+$('walletTopupRows').addEventListener('click',async e=>{
+ const approve=e.target.closest('[data-topup-approve]'),reject=e.target.closest('[data-topup-reject]');
+ const btn=approve||reject;if(!btn)return;
+ const id=Number(btn.dataset.topupApprove||btn.dataset.topupReject),yes=!!approve;
+ if(yes&&!confirm('Bạn đã kiểm tra và chắc chắn đã nhận đủ tiền cho yêu cầu #'+id+'? Hệ thống sẽ cộng tiền vào ví khách.'))return;
+ if(!yes&&!confirm('Từ chối yêu cầu nạp ví #'+id+'? Ví khách sẽ không được cộng tiền.'))return;
+ const note=prompt('Ghi chú Admin (có thể để trống):')||'';
+ const buttons=[...$('walletTopupRows').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
+ try{
+  const {data,error}=await db.rpc('admin_review_shop_wallet_topup',{p_topup_id:id,p_approve:yes,p_admin_note:note});
+  if(error)throw error;
+  $('walletTopupsMessage').textContent=yes?'Đã xác nhận và cộng tiền vào ví. Số dư mới: '+money(data):'Đã từ chối yêu cầu nạp.';
+  await loadAdminWalletTopups();
+ }catch(err){$('walletTopupsMessage').textContent='Không xử lý được: '+(err.message||err);buttons.forEach(b=>b.disabled=false);}
+});
 
 // ADMIN: cấu hình tỷ lệ và ảnh trò chơi
 let gameConfigCache={wheel_image_url:'',blindbox_image_url:''};
