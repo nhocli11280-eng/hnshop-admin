@@ -530,31 +530,19 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <div class="table-wrap"><table><thead><tr><th>Mã</th><th>Khách hàng</th><th>Số tiền</th><th>Nội dung giao dịch</th><th>Ngày gửi</th><th>Trạng thái / Xử lý</th></tr></thead>
 <tbody id="walletTopupRows"><tr><td colspan="6">Đang tải...</td></tr></tbody></table></div>
 </div></section>
-<section id="gameSettings" class="page hidden">
-<h2>Cấu hình Vòng quay & Túi mù</h2>
-<div class="panel">
-<p>Điều chỉnh tỷ lệ phần thưởng. Tổng tỷ lệ phải đúng 100%. Thiết lập áp dụng cho cả Vòng quay và Túi mù.</p>
+<section id="gameSettings" class="page hidden"><h2>Cấu hình Vòng quay & Túi mù</h2><div class="panel">
+<p>Thiết lập phần thưởng riêng cho từng trò chơi. Đặt 0% để bỏ phần thưởng khỏi trò chơi đó. Tổng tỷ lệ mỗi trò phải đúng 100%.</p>
+<h3>Vòng quay</h3><label>Giá mỗi lượt quay (VNĐ)</label><input id="wheelCost" type="number" min="1" step="1000" value="15000">
 <div class="form-grid">
-<div><label>Key 1 ngày (%)</label><input id="gameOdds1" type="number" min="0" max="100" step="0.1" value="84"></div>
-<div><label>Key 3 ngày (%)</label><input id="gameOdds3" type="number" min="0" max="100" step="0.1" value="6"></div>
-<div><label>Key 7 ngày (%)</label><input id="gameOdds7" type="number" min="0" max="100" step="0.1" value="3"></div>
-<div><label>Key 30 ngày (%)</label><input id="gameOdds30" type="number" min="0" max="100" step="0.1" value="1"></div>
-<div><label>Tiền ví 20.000 đ (%)</label><input id="gameOdds20" type="number" min="0" max="100" step="0.1" value="4"></div>
-<div><label>Tiền ví 50.000 đ (%)</label><input id="gameOdds50" type="number" min="0" max="100" step="0.1" value="2"></div>
-</div>
-<p id="gameOddsTotal" aria-live="polite">Tổng: 100%</p>
-<hr>
-<h3>Ảnh Vòng quay</h3>
-<p>Chọn ảnh nền riêng cho vòng quay (JPG, PNG hoặc WebP, tối đa 5 MB).</p>
-<input id="gameWheelImage" type="file" accept="image/*">
-<img id="gameWheelPreview" alt="Xem trước ảnh vòng quay" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
-<h3 style="margin-top:18px">Ảnh Túi mù</h3>
-<p>Chọn ảnh minh họa túi mù.</p>
-<input id="gameBlindImage" type="file" accept="image/*">
-<img id="gameBlindPreview" alt="Xem trước ảnh túi mù" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
-<div class="actions"><button id="saveGameSettings" type="button">Lưu cấu hình</button><button id="refreshGameSettings" class="secondary" type="button">Tải lại</button></div>
-<p id="gameSettingsMessage" aria-live="polite"></p>
-</div></section>
+<div><label>Key 1 ngày (%)</label><input id="wheelOdds1" type="number" min="0" max="100" step="0.1" value="84"></div><div><label>Key 3 ngày (%)</label><input id="wheelOdds3" type="number" min="0" max="100" step="0.1" value="6"></div><div><label>Key 7 ngày (%)</label><input id="wheelOdds7" type="number" min="0" max="100" step="0.1" value="3"></div><div><label>Key 30 ngày (%)</label><input id="wheelOdds30" type="number" min="0" max="100" step="0.1" value="1"></div><div><label>Tiền ví 20.000 đ (%)</label><input id="wheelOdds20" type="number" min="0" max="100" step="0.1" value="4"></div><div><label>Tiền ví 50.000 đ (%)</label><input id="wheelOdds50" type="number" min="0" max="100" step="0.1" value="2"></div>
+</div><p id="wheelOddsTotal">Tổng Vòng quay: 100%</p><hr>
+<h3>Túi mù</h3><label>Giá mỗi lần mở túi (VNĐ)</label><input id="blindboxCost" type="number" min="1" step="1000" value="15000">
+<div class="form-grid">
+<div><label>Key 1 ngày (%)</label><input id="blindOdds1" type="number" min="0" max="100" step="0.1" value="84"></div><div><label>Key 3 ngày (%)</label><input id="blindOdds3" type="number" min="0" max="100" step="0.1" value="6"></div><div><label>Key 7 ngày (%)</label><input id="blindOdds7" type="number" min="0" max="100" step="0.1" value="3"></div><div><label>Key 30 ngày (%)</label><input id="blindOdds30" type="number" min="0" max="100" step="0.1" value="1"></div><div><label>Tiền ví 20.000 đ (%)</label><input id="blindOdds20" type="number" min="0" max="100" step="0.1" value="4"></div><div><label>Tiền ví 50.000 đ (%)</label><input id="blindOdds50" type="number" min="0" max="100" step="0.1" value="2"></div>
+</div><p id="blindOddsTotal">Tổng Túi mù: 100%</p><hr>
+<h3>Ảnh Vòng quay</h3><p>Chọn ảnh nền riêng cho vòng quay (JPG, PNG hoặc WebP, tối đa 5 MB).</p><input id="gameWheelImage" type="file" accept="image/*"><img id="gameWheelPreview" alt="Xem trước ảnh vòng quay" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
+<h3 style="margin-top:18px">Ảnh Túi mù</h3><p>Chọn ảnh minh họa túi mù.</p><input id="gameBlindImage" type="file" accept="image/*"><img id="gameBlindPreview" alt="Xem trước ảnh túi mù" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
+<div class="actions"><button id="saveGameSettings" type="button">Lưu cấu hình</button><button id="refreshGameSettings" class="secondary" type="button">Tải lại</button></div><p id="gameSettingsMessage" aria-live="polite"></p></div></section>
 <section id="sellMonitor" class="page hidden">
 <h2>Tổng quan</h2>
 <div class="actions" style="margin-bottom:14px">
@@ -2178,55 +2166,16 @@ $('walletTopupRows').addEventListener('click',async e=>{
 
 // ADMIN: cấu hình tỷ lệ và ảnh trò chơi
 let gameConfigCache={wheel_image_url:'',blindbox_image_url:''};
-function readGameOdds(){
- return [
-  {id:'key1',type:'key',days:1,value:0,label:'Key 1 ngày',weight:Number($('gameOdds1').value)},
-  {id:'key3',type:'key',days:3,value:0,label:'Key 3 ngày',weight:Number($('gameOdds3').value)},
-  {id:'key7',type:'key',days:7,value:0,label:'Key 7 ngày',weight:Number($('gameOdds7').value)},
-  {id:'key30',type:'key',days:30,value:0,label:'Key 30 ngày',weight:Number($('gameOdds30').value)},
-  {id:'wallet20',type:'wallet',days:0,value:20000,label:'Tiền ví 20.000 đ',weight:Number($('gameOdds20').value)},
-  {id:'wallet50',type:'wallet',days:0,value:50000,label:'Tiền ví 50.000 đ',weight:Number($('gameOdds50').value)}
- ];
-}
-function updateGameOddsTotal(){
- const vals=readGameOdds().map(x=>x.weight);
- const total=vals.reduce((a,b)=>a+b,0);
- $('gameOddsTotal').textContent='Tổng: '+(Number.isFinite(total)?total.toFixed(1):'không hợp lệ')+'%';
- $('gameOddsTotal').style.color=Math.abs(total-100)<0.0001?'#176b37':'#bd3545';
- return Math.abs(total-100)<0.0001&&vals.every(x=>Number.isFinite(x)&&x>=0&&x<=100);
-}
-async function loadGameSettings(){
- $('gameSettingsMessage').textContent='Đang tải cấu hình...';
- const {data,error}=await db.rpc('admin_get_shop_game_config');
- if(error)throw error;
- const cfg=data||{};
- const odds=Array.isArray(cfg.prizes)?cfg.prizes:[];
- const map={key1:'gameOdds1',key3:'gameOdds3',key7:'gameOdds7',key30:'gameOdds30',wallet20:'gameOdds20',wallet50:'gameOdds50'};
- odds.forEach(x=>{if(map[x.id]&&$(map[x.id]))$(map[x.id]).value=Number(x.weight||0)/100;});
- gameConfigCache={wheel_image_url:cfg.wheel_image_url||'',blindbox_image_url:cfg.blindbox_image_url||''};
- [['gameWheelPreview',gameConfigCache.wheel_image_url],['gameBlindPreview',gameConfigCache.blindbox_image_url]].forEach(([id,url])=>{const im=$(id);im.src=url;im.style.display=url?'block':'none';});
- updateGameOddsTotal();$('gameSettingsMessage').textContent='Đã tải cấu hình hiện tại.';
-}
-['gameOdds1','gameOdds3','gameOdds7','gameOdds30','gameOdds20','gameOdds50'].forEach(id=>$(id).addEventListener('input',updateGameOddsTotal));
+const gamePrizeDefs=[{id:'key1',type:'key',days:1,value:0,label:'Key 1 ngày'},{id:'key3',type:'key',days:3,value:0,label:'Key 3 ngày'},{id:'key7',type:'key',days:7,value:0,label:'Key 7 ngày'},{id:'key30',type:'key',days:30,value:0,label:'Key 30 ngày'},{id:'wallet20',type:'wallet',days:0,value:20000,label:'Tiền ví 20.000 đ'},{id:'wallet50',type:'wallet',days:0,value:50000,label:'Tiền ví 50.000 đ'}];
+const gameOddsSuffix={key1:'1',key3:'3',key7:'7',key30:'30',wallet20:'20',wallet50:'50'};
+function readGameOdds(prefix){return gamePrizeDefs.map(p=>({...p,weight:Number($(prefix+'Odds'+gameOddsSuffix[p.id]).value)}));}
+function updateGameOddsTotal(){let ok=true;for(const [prefix,label] of [['wheel','Vòng quay'],['blind','Túi mù']]){const vals=readGameOdds(prefix).map(x=>x.weight),total=vals.reduce((a,b)=>a+b,0),node=$(prefix==='wheel'?'wheelOddsTotal':'blindOddsTotal');node.textContent='Tổng '+label+': '+(Number.isFinite(total)?total.toFixed(1):'không hợp lệ')+'%';node.style.color=Math.abs(total-100)<0.0001?'#176b37':'#bd3545';if(Math.abs(total-100)>=0.0001||!vals.every(x=>Number.isFinite(x)&&x>=0&&x<=100))ok=false;}return ok&&Number.isInteger(Number($('wheelCost').value))&&Number($('wheelCost').value)>0&&Number.isInteger(Number($('blindboxCost').value))&&Number($('blindboxCost').value)>0;}
+async function loadGameSettings(){$('gameSettingsMessage').textContent='Đang tải cấu hình...';const {data,error}=await db.rpc('admin_get_shop_game_config');if(error)throw error;const cfg=data||{};const fill=(prefix,prizes)=>(Array.isArray(prizes)?prizes:[]).forEach(x=>{if(gameOddsSuffix[x.id])$(prefix+'Odds'+gameOddsSuffix[x.id]).value=Number(x.weight||0)/100;});fill('wheel',cfg.wheel_prizes||cfg.prizes);fill('blind',cfg.blindbox_prizes||cfg.prizes);$('wheelCost').value=Number(cfg.wheel_cost||15000);$('blindboxCost').value=Number(cfg.blindbox_cost||15000);gameConfigCache={wheel_image_url:cfg.wheel_image_url||'',blindbox_image_url:cfg.blindbox_image_url||''};[['gameWheelPreview',gameConfigCache.wheel_image_url],['gameBlindPreview',gameConfigCache.blindbox_image_url]].forEach(([id,url])=>{const im=$(id);im.src=url;im.style.display=url?'block':'none';});updateGameOddsTotal();$('gameSettingsMessage').textContent='Đã tải cấu hình hiện tại.';}
+['wheel','blind'].forEach(prefix=>['1','3','7','30','20','50'].forEach(n=>$(prefix+'Odds'+n).addEventListener('input',updateGameOddsTotal)));$('wheelCost').addEventListener('input',updateGameOddsTotal);$('blindboxCost').addEventListener('input',updateGameOddsTotal);
 $('gameWheelImage').addEventListener('change',()=>{const f=$('gameWheelImage').files[0];if(f){$('gameWheelPreview').src=URL.createObjectURL(f);$('gameWheelPreview').style.display='block';}});
 $('gameBlindImage').addEventListener('change',()=>{const f=$('gameBlindImage').files[0];if(f){$('gameBlindPreview').src=URL.createObjectURL(f);$('gameBlindPreview').style.display='block';}});
 $('refreshGameSettings').onclick=()=>loadGameSettings().catch(e=>$('gameSettingsMessage').textContent=e.message||String(e));
-$('saveGameSettings').onclick=async()=>{
- const btn=$('saveGameSettings');
- try{
-  if(!updateGameOddsTotal())throw Error('Tổng tỷ lệ phải đúng 100%.');
-  btn.disabled=true;$('gameSettingsMessage').textContent='Đang lưu...';
-  const wheelFile=$('gameWheelImage').files[0],blindFile=$('gameBlindImage').files[0];
-  if(wheelFile)gameConfigCache.wheel_image_url=await uploadImage(wheelFile);
-  if(blindFile)gameConfigCache.blindbox_image_url=await uploadImage(blindFile);
-  const payload={prizes:readGameOdds().map(x=>({...x,weight:Math.round(x.weight*100)})),wheel_image_url:gameConfigCache.wheel_image_url,blindbox_image_url:gameConfigCache.blindbox_image_url};
-  const {data,error}=await db.rpc('admin_save_shop_game_config',{p_config:payload});
-  if(error)throw error;
-  $('gameWheelImage').value='';$('gameBlindImage').value='';
-  $('gameSettingsMessage').textContent='Đã lưu tỷ lệ và ảnh. Shop sẽ dùng cấu hình mới khi tải lại trang.';
- }catch(e){$('gameSettingsMessage').textContent=e.message||String(e);}
- finally{btn.disabled=false;}
-};
+$('saveGameSettings').onclick=async()=>{const btn=$('saveGameSettings');try{if(!updateGameOddsTotal())throw Error('Mỗi trò chơi phải có tổng tỷ lệ đúng 100%; giá lượt chơi phải là số nguyên lớn hơn 0.');btn.disabled=true;$('gameSettingsMessage').textContent='Đang lưu...';const wf=$('gameWheelImage').files[0],bf=$('gameBlindImage').files[0];if(wf)gameConfigCache.wheel_image_url=await uploadImage(wf);if(bf)gameConfigCache.blindbox_image_url=await uploadImage(bf);const weights=prefix=>readGameOdds(prefix).map(x=>({...x,weight:Math.round(x.weight*100)}));const payload={wheel_prizes:weights('wheel'),blindbox_prizes:weights('blind'),wheel_cost:Number($('wheelCost').value),blindbox_cost:Number($('blindboxCost').value),wheel_image_url:gameConfigCache.wheel_image_url,blindbox_image_url:gameConfigCache.blindbox_image_url};const {error}=await db.rpc('admin_save_shop_game_config',{p_config:payload});if(error)throw error;$('gameWheelImage').value='';$('gameBlindImage').value='';$('gameSettingsMessage').textContent='Đã lưu phần thưởng và giá riêng cho Vòng quay, Túi mù.';}catch(e){$('gameSettingsMessage').textContent=e.message||String(e);}finally{btn.disabled=false;}};
 
 </script>
 </body>
