@@ -488,6 +488,34 @@ async function refreshGameWallet(){
  node.textContent=moneyVND(data);
 }
 
+
+async function loadMyWalletTopups(){
+ const list=document.getElementById("myTopups");
+ if(!currentUser){list.textContent="Đăng nhập để xem yêu cầu nạp.";return;}
+ list.textContent="Đang tải yêu cầu nạp...";
+ const {data,error}=await db.rpc("shop_list_my_wallet_topups");
+ if(error){list.textContent="Chưa tải được lịch sử nạp: "+error.message;return;}
+ const status={pending:"Đang chờ Admin xác nhận",approved:"Đã cộng tiền vào ví",rejected:"Đã từ chối"};
+ list.innerHTML="<h4>Lịch sử nạp ví</h4>"+((data||[]).length?(data||[]).map(x=>"<div class='topup-history'><b>#"+x.id+" · "+moneyVND(x.amount)+"</b><span>"+safe(status[x.status]||x.status)+"</span><small>"+new Date(x.created_at).toLocaleString("vi-VN")+"</small>"+(x.note?"<small>Nội dung: "+safe(x.note)+"</small>":"")+(x.admin_note?"<small>Admin: "+safe(x.admin_note)+"</small>":"")+"</div>").join(""):"<p>Chưa có yêu cầu nạp nào.</p>");
+}
+document.getElementById("submitTopup").addEventListener("click",async()=>{
+ const btn=document.getElementById("submitTopup"),msg=document.getElementById("topupMessage");
+ if(!currentUser){msg.textContent="Vui lòng đăng nhập trước khi nạp ví.";return;}
+ const amount=Number(document.getElementById("topupAmount").value);
+ const note=document.getElementById("topupNote").value.trim();
+ if(!Number.isInteger(amount)||amount<10000||amount>10000000){msg.textContent="Số tiền nạp từ 10.000 đến 10.000.000đ.";return;}
+ btn.disabled=true;msg.textContent="Đang gửi yêu cầu...";
+ try{
+  const {data,error}=await db.rpc("shop_request_wallet_topup",{p_amount:amount,p_note:note});
+  if(error)throw error;
+  msg.textContent="Đã gửi yêu cầu #"+data+". Ví chưa được cộng tiền; vui lòng chờ Admin xác nhận.";
+  document.getElementById("topupAmount").value="";
+  document.getElementById("topupNote").value="";
+  await loadMyWalletTopups();
+ }catch(e){msg.textContent="Không gửi được: "+(e.message||e);}
+ finally{btn.disabled=false;}
+});
+
 async function loadShopGameConfig(){
  try{
   const {data,error}=await db.rpc("shop_get_game_config");
@@ -534,6 +562,7 @@ function openGame(type){
  document.getElementById("blindStage").querySelector(".blindbox-large").classList.remove("opening");
  gameModal.classList.add("show");gameModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
  refreshGameWallet();
+ loadMyWalletTopups();
  loadShopGameConfig();
 }
 document.querySelectorAll("[data-game]").forEach(btn=>btn.addEventListener("click",()=>openGame(btn.dataset.game)));
