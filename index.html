@@ -406,13 +406,15 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <section id="sellStaff" class="page hidden">
 <h2>Quản lý tài khoản Sellkey</h2>
 <div class="panel">
-<p>Chỉ cấp quyền cho email đã đăng ký tài khoản trong Supabase Authentication. Thu hồi quyền sẽ vô hiệu hóa đăng nhập Sellkey nhưng không xóa lịch sử mua hàng.</p>
-<label>Email tài khoản đã đăng ký</label>
-<input id="sellStaffEmail" type="email" placeholder="sell@example.com">
-<div class="actions"><button id="grantSellBtn">Cấp quyền Sellkey</button><button class="secondary" id="refreshSellStaff">Làm mới danh sách</button></div>
+<p>Admin tự tạo tài khoản Sellkey bằng email và mật khẩu. Nhân viên dùng chính email và mật khẩu này để đăng nhập trang Admin; không cần tự đăng ký.</p>
+<label>Email đăng nhập Sellkey</label>
+<input id="sellStaffEmail" type="email" autocomplete="off" placeholder="sell@example.com">
+<label>Mật khẩu khởi tạo (ít nhất 8 ký tự)</label>
+<input id="sellStaffPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Nhập mật khẩu cho nhân viên">
+<div class="actions"><button id="grantSellBtn">Tạo tài khoản Sellkey</button><button class="secondary" id="refreshSellStaff">Làm mới danh sách</button></div>
 <p id="sellStaffMessage" aria-live="polite"></p>
 <div class="table-wrap"><table>
-<thead><tr><th>Email</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<thead><tr><th>Email đăng nhập</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
 <tbody id="sellStaffRows"><tr><td colspan="3">Đang tải...</td></tr></tbody>
 </table></div>
 </div>
@@ -1557,41 +1559,48 @@ window.toggleShopCustomer=async(userId,blocked)=>{
 };
 $('refreshCustomerAccess').onclick=()=>loadCustomerAccess().catch(fail);
 
-/* QUẢN LÝ NHÂN VIÊN SELLKEY */
+/* QUẢN LÝ NHÂN VIÊN SELLKEY - thao tác tài khoản qua Edge Function dùng service role phía máy chủ */
+async function manageSellAccount(payload) {
+ const {data,error}=await db.functions.invoke('admin-manage-sell',{body:payload});
+ if(error) throw error;
+ if(data?.error) throw Error(data.error);
+ return data;
+}
 async function loadSellStaff() {
  $('sellStaffRows').innerHTML='<tr><td colspan="3">Đang tải...</td></tr>';
- const {data,error}=await db.rpc('admin_list_sell_staff');
- if(error) throw error;
- const rows=Array.isArray(data)?data:[];
- $('sellStaffRows').innerHTML=rows.length?rows.map(x=>`<tr>
-  <td>${escapeHTML(x.email)}</td><td>${x.active?'Đang hoạt động':'Đã bị vô hiệu hóa'}</td>
-  <td><div class="actions">${x.active
-   ? `<button class="danger" onclick="setSellRole('${escapeHTML(x.email)}',false)">Kích khỏi Admin</button>`
-   : `<button onclick="setSellRole('${escapeHTML(x.email)}',true)">Cấp lại quyền</button>`}
+ const result=await manageSellAccount({action:'list'});
+ const rows=Array.isArray(result.users)?result.users:[];
+ $('sellStaffRows').innerHTML=rows.length?rows.map(x=>`
+  <tr><td>${escapeHTML(x.email||'')}</td><td>${x.disabled?'Đã vô hiệu hóa':'Đang hoạt động'}</td>
+  <td><div class="actions">${x.disabled
+   ? `<button onclick="setSellAccount('${escapeHTML(x.id)}','enable')">Kích hoạt</button>`
+   : `<button class="secondary" onclick="setSellAccount('${escapeHTML(x.id)}','disable')">Kích khỏi Admin</button>`}
+   <button class="danger" onclick="setSellAccount('${escapeHTML(x.id)}','delete')">Xóa tài khoản</button>
   </div></td></tr>`).join(''):'<tr><td colspan="3">Chưa có tài khoản Sellkey.</td></tr>';
 }
-window.setSellRole=async(email,enabled)=>{
- const action=enabled?'cấp lại quyền Sellkey cho':'vô hiệu hóa tài khoản Sellkey của';
- if(!confirm('Bạn có chắc muốn '+action+' '+email+'?')) return;
+window.setSellAccount=async(userId,action)=>{
+ const labels={enable:'kích hoạt lại',disable:'vô hiệu hóa',delete:'xóa vĩnh viễn tài khoản đăng nhập'};
+ if(!confirm('Bạn có chắc muốn '+labels[action]+' tài khoản Sellkey này?'+(action==='delete'?' Thao tác xóa không thể hoàn tác.':''))) return;
  try{
-  const {data,error}=await db.rpc('admin_set_sell_role',{p_email:email,p_enabled:enabled});
-  if(error) throw error;
-  if(data!==true) throw Error('Không tìm thấy tài khoản hoặc tài khoản không thể thay đổi quyền.');
-  $('sellStaffMessage').textContent=enabled?'Đã cấp lại quyền Sellkey.':'Đã vô hiệu hóa tài khoản Sellkey.';
+  await manageSellAccount({action,user_id:userId});
+  $('sellStaffMessage').textContent=action==='delete'?'Đã xóa tài khoản đăng nhập Sellkey.':action==='disable'?'Đã vô hiệu hóa tài khoản Sellkey.':'Đã kích hoạt lại tài khoản Sellkey.';
   await loadSellStaff();
  }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
 };
 $('grantSellBtn').onclick=async()=>{
  const email=$('sellStaffEmail').value.trim();
- if(!email) { $('sellStaffMessage').textContent='Nhập email tài khoản đã đăng ký.'; return; }
+ const password=$('sellStaffPassword').value;
+ if(!email||!password){$('sellStaffMessage').textContent='Nhập email và mật khẩu cho tài khoản Sellkey.';return;}
+ if(password.length<8){$('sellStaffMessage').textContent='Mật khẩu phải có ít nhất 8 ký tự.';return;}
+ const btn=$('grantSellBtn');
  try{
-  const {data,error}=await db.rpc('admin_set_sell_role',{p_email:email,p_enabled:true});
-  if(error) throw error;
-  if(data!==true) throw Error('Không tìm thấy email. Hãy tạo tài khoản trong Supabase Authentication trước.');
-  $('sellStaffMessage').textContent='Đã cấp quyền Sellkey cho '+email;
-  $('sellStaffEmail').value='';
+  btn.disabled=true;btn.textContent='Đang tạo tài khoản...';
+  await manageSellAccount({action:'create',email,password});
+  $('sellStaffMessage').textContent='Đã tạo tài khoản Sellkey. Gửi email và mật khẩu cho nhân viên để đăng nhập.';
+  $('sellStaffEmail').value='';$('sellStaffPassword').value='';
   await loadSellStaff();
  }catch(e){$('sellStaffMessage').textContent=e.message||String(e);}
+ finally{btn.disabled=false;btn.textContent='Tạo tài khoản Sellkey';}
 };
 $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage').textContent=e.message||String(e));
 
