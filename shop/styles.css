@@ -412,3 +412,14 @@ body{animation:none!important}
 
 /* Keep the shop announcement moving even when the device requests reduced motion. */
 @media(prefers-reduced-motion:reduce){.announcement-track{animation:announcement-scroll 12s linear infinite!important}}
+
+.wallet-topup{margin:14px 0;padding:14px;border:1px solid #1b607e;border-radius:12px;background:rgba(5,20,38,.88);text-align:left}
+.wallet-topup h3{margin:0 0 8px;color:#7fe7ff;font-size:16px}
+.wallet-topup p{font-size:12px;line-height:1.6;color:#bdd8e8}
+.wallet-topup input{display:block;width:100%;margin:8px 0;padding:12px;border:1px solid #28718f;border-radius:8px;background:#06172b;color:#eafaff;font:inherit}
+.wallet-topup button{width:100%;min-height:44px;border:1px solid #39cfff;border-radius:9px;background:linear-gradient(100deg,#075a9c,#087f9f);color:white;font-weight:800}
+.wallet-topup button:disabled{opacity:.6}
+#topupMessage{color:#8de9ff;overflow-wrap:anywhere}
+.topup-history{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid #23445b;font-size:12px;color:#d9efff}
+.topup-history span{color:#7fe7ff}
+.topup-history small{color:#91aec4;overflow-wrap:anywhere}
