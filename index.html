@@ -431,7 +431,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <h3>Khách hàng đã mua key</h3>
 <button id="refreshSellCustomers" class="secondary">Làm mới danh sách</button>
 <div class="table-wrap"><table>
-<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th></tr></thead>
+<thead><tr><th>Tên tài khoản</th><th>Email</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Số đơn hoàn tất</th><th>Số key đã mua</th><th>Tổng tiền buy key</th></tr></thead>
 <tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
 </table></div>
 <p id="sellCustomerMessage" aria-live="polite"></p>
@@ -1631,19 +1631,23 @@ $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage')
 /* MÀN HÌNH GIỚI HẠN CHO SELLKEY */
 async function loadSellMonitor(){
  $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
- $('sellCustomerRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
+ $('sellCustomerRows').innerHTML='<tr><td colspan="7">Đang tải...</td></tr>';
  try{
-  const {data,error}=await db.rpc('sell_list_shop_customers');
+  const {data,error}=await db.rpc('sell_list_shop_customer_summary');
   if(error) throw error;
   const rows=Array.isArray(data)?data:[];
   $('sellCustomerRows').innerHTML=rows.length?rows.map(x=>`<tr>
    <td>${escapeHTML(x.username||'Khách hàng')}</td><td>${escapeHTML(x.email||'')}</td>
    <td>${date(x.created_at)}</td><td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
-  </tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản khách hàng.</td></tr>';
-  $('sellCustomerMessage').textContent='Đang hiển thị '+rows.length+' tài khoản khách.';
+   <td>${Number(x.total_orders||0).toLocaleString('vi-VN')}</td>
+   <td>${Number(x.total_keys||0).toLocaleString('vi-VN')}</td>
+   <td>${storeMoney(x.total_spent)}</td>
+  </tr>`).join(''):'<tr><td colspan="7">Chưa có tài khoản khách hàng.</td></tr>';
+  const totals=rows.reduce((a,x)=>({orders:a.orders+Number(x.total_orders||0),keys:a.keys+Number(x.total_keys||0),money:a.money+Number(x.total_spent||0)}),{orders:0,keys:0,money:0});
+  $('sellCustomerMessage').textContent='Tổng cộng: '+rows.length+' khách · '+totals.orders+' đơn hoàn tất · '+totals.keys+' key · '+storeMoney(totals.money)+'. Chỉ tính đơn fulfilled.';
  }catch(e){
-  $('sellCustomerRows').innerHTML='<tr><td colspan="4">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
-  $('sellCustomerMessage').textContent='Danh sách khách hàng chưa tải được. Vui lòng thử làm mới hoặc kiểm tra quyền Sell.';
+  $('sellCustomerRows').innerHTML='<tr><td colspan="7">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
+  $('sellCustomerMessage').textContent='Danh sách thống kê chưa tải được. Vui lòng kiểm tra hàm sell_list_shop_customer_summary trong Supabase.';
  }
 }
 $('refreshSellErrors').onclick=()=>{$('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi.</li>';};
