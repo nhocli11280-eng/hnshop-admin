@@ -435,6 +435,13 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <tbody id="sellCustomerRows"><tr><td colspan="4">Đang tải...</td></tr></tbody>
 </table></div>
 <p id="sellCustomerMessage" aria-live="polite"></p>
+<h3 style="margin-top:22px">Tổng hợp thống kê</h3>
+<div class="stats" id="sellSummaryStats">
+ <div class="stat">Tổng khách hàng<strong id="sellStatCustomers">—</strong></div>
+ <div class="stat">Đơn hoàn tất<strong id="sellStatOrders">—</strong></div>
+ <div class="stat">Tổng key đã bán<strong id="sellStatKeys">—</strong></div>
+ <div class="stat">Tổng doanh thu buy key<strong id="sellStatRevenue">—</strong></div>
+</div>
 </div>
 </section>
 <section id="branding" class="page hidden">
@@ -1632,6 +1639,7 @@ $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage')
 async function loadSellMonitor(){
  $('sellErrorRows').innerHTML=adminRuntimeErrors.length?adminRuntimeErrors.map(x=>'<li>'+escapeHTML(x)+'</li>').join(''):'<li>Chưa ghi nhận lỗi JavaScript hoặc tác vụ nền trong phiên này.</li>';
  $('sellCustomerRows').innerHTML='<tr><td colspan="7">Đang tải...</td></tr>';
+ $('sellStatCustomers').textContent='—';$('sellStatOrders').textContent='—';$('sellStatKeys').textContent='—';$('sellStatRevenue').textContent='—';
  try{
   const {data,error}=await db.rpc('sell_list_shop_customer_summary');
   if(error) throw error;
@@ -1644,7 +1652,11 @@ async function loadSellMonitor(){
    <td>${storeMoney(x.total_spent)}</td>
   </tr>`).join(''):'<tr><td colspan="7">Chưa có tài khoản khách hàng.</td></tr>';
   const totals=rows.reduce((a,x)=>({orders:a.orders+Number(x.total_orders||0),keys:a.keys+Number(x.total_keys||0),money:a.money+Number(x.total_spent||0)}),{orders:0,keys:0,money:0});
-  $('sellCustomerMessage').textContent='Tổng cộng: '+rows.length+' khách · '+totals.orders+' đơn hoàn tất · '+totals.keys+' key · '+storeMoney(totals.money)+'. Chỉ tính đơn fulfilled.';
+  $('sellCustomerMessage').textContent='Thống kê chỉ tính các đơn đã hoàn tất (fulfilled).';
+  $('sellStatCustomers').textContent=rows.length.toLocaleString('vi-VN');
+  $('sellStatOrders').textContent=totals.orders.toLocaleString('vi-VN');
+  $('sellStatKeys').textContent=totals.keys.toLocaleString('vi-VN');
+  $('sellStatRevenue').textContent=storeMoney(totals.money);
  }catch(e){
   $('sellCustomerRows').innerHTML='<tr><td colspan="7">Không thể tải danh sách: '+escapeHTML(e.message||e)+'</td></tr>';
   $('sellCustomerMessage').textContent='Danh sách thống kê chưa tải được. Vui lòng kiểm tra hàm sell_list_shop_customer_summary trong Supabase.';
