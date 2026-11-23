@@ -91,7 +91,7 @@ end;
 $$;
 
 create or replace function public.assert_shop_customer_active()
-returns void language plpgsql security definer set search_path=''
+returns void language plpgsql stable security definer set search_path=''
 as $$
 begin
   if auth.uid() is null then raise exception 'Vui lòng đăng nhập để sử dụng Shop'; end if;
