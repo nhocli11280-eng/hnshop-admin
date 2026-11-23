@@ -272,6 +272,15 @@ tr:hover td{background:rgba(0,145,220,.055)}
   #sellMonitor .stat strong{font-size:18px}
 }
 
+@media(max-width:700px){
+ #sellerPermissionsTable thead{display:none}
+ #sellerPermissionsTable,#sellerPermissionsTable tbody,#sellerPermissionsTable tr,#sellerPermissionsTable td{display:block;width:100%;box-sizing:border-box}
+ #sellerPermissionsTable tr{border:1px solid #38516a;border-radius:10px;margin:10px 0;padding:8px;background:rgba(255,255,255,.025)}
+ #sellerPermissionsTable td{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.1)}
+ #sellerPermissionsTable td:last-child{border-bottom:0}
+ #sellerPermissionsTable td:before{content:attr(data-label);font-weight:600;text-align:left}
+ #sellerPermissionsTable td input{margin-left:auto;flex:0 0 auto}
+}
 </style>
 </head>
 <body>
@@ -522,7 +531,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <p>Bật hoặc tắt riêng từng quyền cho từng tài khoản Seller. Thu hồi quyền sẽ có hiệu lực khi Seller đồng bộ quyền.</p>
 <button id="refreshSellerPermissions" class="secondary" type="button">Làm mới danh sách</button>
 <p id="sellerPermissionsMessage" aria-live="polite"></p>
-<div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th><th>Kích khách khỏi Shop</th></tr></thead>
+<div class="table-wrap"><table id="sellerPermissionsTable"><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th><th>Kích khách khỏi Shop</th></tr></thead>
 <tbody id="sellerPermissionsRows"><tr><td colspan="5">Đang tải...</td></tr></tbody></table></div></div></section>
 <section id="walletTopups" class="page hidden">
 <h2>Duyệt yêu cầu nạp ví</h2>
@@ -1899,11 +1908,11 @@ async function loadSellerPermissions(){
  if(error) throw error;
  const rows=Array.isArray(data)?data:[];
  $('sellerPermissionsRows').innerHTML=rows.length?rows.map(x=>`
-  <tr><td>${escapeHTML(x.username||x.user_id)}</td>
-   <td><input type="checkbox" style="width:auto" ${x.can_use_key_stock?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','key_stock',this.checked)"></td>
-   <td><input type="checkbox" style="width:auto" ${x.can_sell_keys?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','sell_keys',this.checked)"></td>
-   <td><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td>
-   <td><input type="checkbox" style="width:auto" ${x.can_kick_customers?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','kick_customers',this.checked)"></td></tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản Seller.</td></tr>';
+  <tr><td data-label="Tài khoản Seller">${escapeHTML(x.username||x.user_id)}</td>
+   <td data-label="Kho key"><input type="checkbox" style="width:auto" ${x.can_use_key_stock?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','key_stock',this.checked)"></td>
+   <td data-label="Bán key"><input type="checkbox" style="width:auto" ${x.can_sell_keys?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','sell_keys',this.checked)"></td>
+   <td data-label="Xem đơn"><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td>
+   <td data-label="Kích khách khỏi Shop"><input type="checkbox" style="width:auto" ${x.can_kick_customers?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','kick_customers',this.checked)"></td></tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản Seller.</td></tr>';
  $('sellerPermissionsMessage').textContent='Đang quản lý '+rows.length+' tài khoản Seller.';
 }
 window.setSellerPermission=async(userId,permission,enabled)=>{
