@@ -380,6 +380,7 @@ document.getElementById("buyButton").addEventListener("click", async e => {
   await createCustomerOrder(selectedProduct);
 });
 db.auth.onAuthStateChange((_event,session)=>{
+  if(session?.user) shopAccessBlocked=false;
   currentUser=session?.user||null;
   refreshAccountUI();
   if(session?.user) setTimeout(()=>registerShopCustomer(),0);
