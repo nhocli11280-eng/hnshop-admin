@@ -308,3 +308,47 @@ end;
 $$;
 revoke all on function public.sell_list_shop_customers() from public;
 grant execute on function public.sell_list_shop_customers() to authenticated;
+
+
+-- Admin customer access RPCs (Seller uses the permission-checked RPCs above).
+create or replace function public.admin_list_shop_customers()
+returns table(user_id uuid,username text,email text,is_blocked boolean,created_at timestamptz)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt()->'app_metadata'->>'role','') <> 'admin' then
+    raise exception 'Chỉ Admin được xem danh sách khách hàng Shop';
+  end if;
+  return query
+  select c.user_id,c.username,c.email,c.is_blocked,c.created_at
+  from public.shop_customer_access c
+  order by c.created_at desc;
+end;
+$$;
+
+create or replace function public.admin_set_shop_customer_blocked(
+  p_user_id uuid,
+  p_blocked boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt()->'app_metadata'->>'role','') <> 'admin' then
+    raise exception 'Chỉ Admin được khóa hoặc mở khóa khách hàng';
+  end if;
+  update public.shop_customer_access
+  set is_blocked=p_blocked
+  where user_id=p_user_id;
+  return found;
+end;
+$$;
+
+revoke all on function public.admin_list_shop_customers() from public;
+revoke all on function public.admin_set_shop_customer_blocked(uuid,boolean) from public;
+grant execute on function public.admin_list_shop_customers() to authenticated;
+grant execute on function public.admin_set_shop_customer_blocked(uuid,boolean) to authenticated;

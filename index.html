@@ -1831,7 +1831,7 @@ async function loadCustomerAccess() {
  `).join(''):'<tr><td colspan="5">Chưa có tài khoản. Khách cần đăng nhập shop ít nhất một lần.</td></tr>';
 }
 window.toggleShopCustomer=async(userId,blocked)=>{
- if(currentUserRole==='sell' && !blocked){fail(Error('Sell không có quyền mở khóa khách. Chỉ Admin được mở khóa.'));return;}
+ if(currentUserRole==='sell' && !currentSellerPermissions.kick_customers){fail(Error('Admin chưa cấp quyền Kích khách khỏi Shop.'));return;}
  if(!confirm(blocked?'Kích tài khoản này khỏi shop và chặn mua hàng?':'Mở khóa tài khoản này?')) return;
  try {
   const rpcName=currentUserRole==='sell'?'sell_set_shop_customer_blocked':'admin_set_shop_customer_blocked';
