@@ -386,7 +386,9 @@ db.auth.onAuthStateChange((_event,session)=>{
   if(session?.user) setTimeout(()=>registerShopCustomer(),0);
 });
 syncCustomerSession().then(()=>{if(currentUser) registerShopCustomer();}).catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
-setInterval(()=>{if(currentUser) enforceShopAccess();},1000);\ndocument.addEventListener("visibilitychange",()=>{if(!document.hidden && currentUser) enforceShopAccess();});\nwindow.addEventListener("focus",()=>{if(currentUser) enforceShopAccess();});
+setInterval(()=>{if(currentUser) enforceShopAccess();},1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden && currentUser) enforceShopAccess();});
+window.addEventListener("focus",()=>{if(currentUser) enforceShopAccess();});
 
 
 /* CHECKOUT VÀ LỊCH SỬ KEY */
