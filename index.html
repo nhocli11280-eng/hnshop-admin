@@ -467,7 +467,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <section id="customerAccess" class="page hidden">
 <h2>Quản lý quyền truy cập khách hàng</h2>
 <div class="panel">
-<p>Khóa tài khoản sẽ khiến khách bị đăng xuất khỏi shop và không thể tiếp tục mua key.</p>
+<p>Khóa tài khoản sẽ chặn mua key, nhận key, nạp ví, Vòng quay/Túi mù và truy cập đơn có key. Chỉ Admin hoặc Seller được Admin cấp quyền mới mở khóa được.</p>
 <button id="refreshCustomerAccess" class="secondary">Làm mới danh sách</button>
 <div class="table-wrap"><table>
 <thead><tr><th>Tài khoản</th><th>Email</th><th>Ngày ghi nhận</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
@@ -1800,7 +1800,7 @@ async function loadCustomers() {
     <td>${escapeHTML(x.email || '')}</td>
     <td>${date(x.created_at)}</td>
     <td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
-    <td>${x.is_blocked?'Không được mua key':'Được phép mua key'}</td>
+    <td>${x.is_blocked?'Không được mua key / dùng dịch vụ':'Được phép mua key và dùng dịch vụ'}</td>
    </tr>
   `).join(''):'<tr><td colspan="5">Chưa có tài khoản shop. Khách cần đăng ký hoặc đăng nhập shop ít nhất một lần.</td></tr>';
  } catch(e) {
