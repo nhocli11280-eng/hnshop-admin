@@ -1981,7 +1981,6 @@ $('sellerCustomerRows').addEventListener('click',async e=>{
  try{
   const {data,error}=await db.rpc('sell_set_shop_customer_blocked',{p_user_id:userId,p_blocked:blocked});
   if(error)throw error;if(data!==true)throw Error('Không cập nhật được trạng thái khách hàng.');
-  msg_unused='';
   await loadSellerCustomers();
  }catch(err){$('sellerCustomersMessage').textContent=err.message||String(err);btn.disabled=false;}
 });
