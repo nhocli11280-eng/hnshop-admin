@@ -315,6 +315,7 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="walletTopups" id="walletTopupsNav">Duyệt nạp ví</button>
 <button data-page="sellOrders" id="sellOrdersNav" class="hidden">Đơn hàng Shop</button>
 <button data-page="sellKeyStock" id="sellKeyStockNav" class="hidden">Kho key sản phẩm</button>
+<button data-page="sellCustomers" id="sellCustomersNav" class="hidden">Kích khách Shop</button>
 <button data-page="sellMonitor" id="sellMonitorNav" class="hidden">Theo dõi hệ thống & khách mua key</button>
 </nav>
 
@@ -521,8 +522,8 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <p>Bật hoặc tắt riêng từng quyền cho từng tài khoản Seller. Thu hồi quyền sẽ có hiệu lực khi Seller đồng bộ quyền.</p>
 <button id="refreshSellerPermissions" class="secondary" type="button">Làm mới danh sách</button>
 <p id="sellerPermissionsMessage" aria-live="polite"></p>
-<div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th></tr></thead>
-<tbody id="sellerPermissionsRows"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div></div></section>
+<div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th><th>Kích khách</th></tr></thead>
+<tbody id="sellerPermissionsRows"><tr><td colspan="5">Đang tải...</td></tr></tbody></table></div></div></section>
 <section id="walletTopups" class="page hidden">
 <h2>Duyệt yêu cầu nạp ví</h2>
 <div class="panel">
@@ -544,6 +545,8 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <h3>Ảnh Vòng quay</h3><p>Chọn ảnh nền riêng cho vòng quay (JPG, PNG hoặc WebP, tối đa 5 MB).</p><input id="gameWheelImage" type="file" accept="image/*"><img id="gameWheelPreview" alt="Xem trước ảnh vòng quay" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
 <h3 style="margin-top:18px">Ảnh Túi mù</h3><p>Chọn ảnh minh họa túi mù.</p><input id="gameBlindImage" type="file" accept="image/*"><img id="gameBlindPreview" alt="Xem trước ảnh túi mù" style="display:none;max-width:220px;max-height:220px;object-fit:contain;border-radius:12px">
 <div class="actions"><button id="saveGameSettings" type="button">Lưu cấu hình</button><button id="refreshGameSettings" class="secondary" type="button">Tải lại</button></div><p id="gameSettingsMessage" aria-live="polite"></p></div></section>
+<section id="sellCustomers" class="page hidden">
+<h2>Quản lý khách hàng Shop</h2><div class="panel"><p>Khách bị khóa không thể mua key, nạp ví hoặc dùng dịch vụ Shop.</p><button id="refreshSellerCustomers" class="secondary" type="button">Làm mới danh sách</button><p id="sellerCustomersMessage" aria-live="polite"></p><div class="table-wrap"><table><thead><tr><th>Tài khoản</th><th>Email</th><th>Ngày ghi nhận</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="sellerCustomerRows"><tr><td colspan="5">Đang tải...</td></tr></tbody></table></div></div></section>
 <section id="sellMonitor" class="page hidden">
 <h2>Tổng quan</h2>
 <div class="actions" style="margin-bottom:14px">
@@ -715,9 +718,10 @@ async function verifyAdmin() {
  if(role === 'sell') {
   const {data:permissions,error:permissionError}=await db.rpc('sell_get_my_permissions');
   if(permissionError) throw permissionError;
-  currentSellerPermissions=permissions||{key_stock:false,sell_keys:false,view_orders:false};
+  currentSellerPermissions=permissions||{key_stock:false,sell_keys:false,view_orders:false,kick_customers:false};
   document.querySelectorAll('nav button').forEach(btn => btn.classList.add('hidden'));
   $('sellMonitorNav').classList.remove('hidden');
+  if(currentSellerPermissions.kick_customers) $('sellCustomersNav').classList.remove('hidden');
   if(currentSellerPermissions.view_orders||currentSellerPermissions.sell_keys) $('sellOrdersNav').classList.remove('hidden');
   if(currentSellerPermissions.key_stock) $('sellKeyStockNav').classList.remove('hidden');
   $('sellMonitorNav').classList.add('active');
@@ -814,6 +818,7 @@ document.querySelectorAll('nav button').forEach(btn => {
    if(btn.dataset.page === 'sellMonitor') await loadSellMonitor();
    if(btn.dataset.page === 'sellOrders') await loadSellerOrders();
    if(btn.dataset.page === 'sellKeyStock') await loadSellerKeyStock();
+   if(btn.dataset.page === 'sellCustomers') await loadSellerCustomers();
   } catch(e) {
    fail(e);
   }
@@ -1896,7 +1901,8 @@ async function loadSellerPermissions(){
   <tr><td>${escapeHTML(x.username||x.user_id)}</td>
    <td><input type="checkbox" style="width:auto" ${x.can_use_key_stock?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','key_stock',this.checked)"></td>
    <td><input type="checkbox" style="width:auto" ${x.can_sell_keys?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','sell_keys',this.checked)"></td>
-   <td><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td></tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản Seller.</td></tr>';
+   <td><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td>
+   <td><input type="checkbox" style="width:auto" ${x.can_kick_customers?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','kick_customers',this.checked)"></td></tr>`).join(''):'<tr><td colspan="5">Chưa có tài khoản Seller.</td></tr>';
  $('sellerPermissionsMessage').textContent='Đang quản lý '+rows.length+' tài khoản Seller.';
 }
 window.setSellerPermission=async(userId,permission,enabled)=>{
@@ -1953,6 +1959,32 @@ async function loadSellMonitor(){
  }
 }
 $('refreshSellDashboard').onclick=()=>loadSellMonitor();
+
+
+/* SELLER: QUẢN LÝ KHÁCH SHOP KHI ĐƯỢC ADMIN CẤP QUYỀN */
+async function loadSellerCustomers(){
+ const body=$('sellerCustomerRows'),msg=$('sellerCustomersMessage');
+ body.innerHTML='<tr><td colspan="5">Đang tải...</td></tr>';msg.textContent='';
+ try{
+  const {data,error}=await db.rpc('sell_list_shop_customers');if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+escapeHTML(x.username||'Khách hàng')+'</td><td>'+escapeHTML(x.email||'')+'</td><td>'+date(x.created_at)+'</td><td>'+(x.is_blocked?'Đã khóa':'Đang hoạt động')+'</td><td><button type="button" class="'+(x.is_blocked?'secondary':'danger')+'" data-sell-customer="'+escapeHTML(x.user_id)+'" data-blocked="'+(!x.is_blocked)+'">'+(x.is_blocked?'Mở khóa':'Kích khỏi Shop')+'</button></td></tr>').join(''):'<tr><td colspan="5">Chưa có khách hàng Shop.</td></tr>';
+  msg.textContent='Có '+rows.length+' tài khoản khách hàng.';
+ }catch(e){body.innerHTML='<tr><td colspan="5">Không tải được danh sách.</td></tr>';msg.textContent=e.message||String(e);}
+}
+$('refreshSellerCustomers').onclick=()=>loadSellerCustomers();
+$('sellerCustomerRows').addEventListener('click',async e=>{
+ const btn=e.target.closest('button[data-sell-customer]');if(!btn)return;
+ const userId=btn.dataset.sellCustomer,blocked=btn.dataset.blocked==='true';
+ if(!confirm(blocked?'Kích khách hàng này khỏi Shop?':'Mở khóa cho khách hàng này?'))return;
+ btn.disabled=true;
+ try{
+  const {data,error}=await db.rpc('sell_set_shop_customer_blocked',{p_user_id:userId,p_blocked:blocked});
+  if(error)throw error;if(data!==true)throw Error('Không cập nhật được trạng thái khách hàng.');
+  msg_unused='';
+  await loadSellerCustomers();
+ }catch(err){$('sellerCustomersMessage').textContent=err.message||String(err);btn.disabled=false;}
+});
 
 /* SELLER: CHỈ CÁC CHỨC NĂNG ĐƯỢC ADMIN CẤP */
 async function loadSellerOrders(){
@@ -2014,10 +2046,11 @@ async function refreshSellerPermissions(){
  const {data,error}=await db.rpc('sell_get_my_permissions'); if(error) throw error;
  currentSellerPermissions=data||{key_stock:false,sell_keys:false,view_orders:false};
  const ordersAllowed=currentSellerPermissions.view_orders||currentSellerPermissions.sell_keys;
+ $('sellCustomersNav').classList.toggle('hidden',!currentSellerPermissions.kick_customers);
  $('sellOrdersNav').classList.toggle('hidden',!ordersAllowed);
  $('sellKeyStockNav').classList.toggle('hidden',!currentSellerPermissions.key_stock);
  const page=document.querySelector('.page:not(.hidden)')?.id;
- if((page==='sellOrders'&&!ordersAllowed)||(page==='sellKeyStock'&&!currentSellerPermissions.key_stock)){
+ if((page==='sellOrders'&&!ordersAllowed)||(page==='sellKeyStock'&&!currentSellerPermissions.key_stock)||(page==='sellCustomers'&&!currentSellerPermissions.kick_customers)){
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   $('sellMonitorNav').classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
