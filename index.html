@@ -1827,11 +1827,12 @@ async function loadCustomerAccess() {
   <tr><td>${escapeHTML(x.username || 'Khách hàng')}</td>
   <td>${escapeHTML(x.email || '')}</td><td>${date(x.created_at)}</td>
   <td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
-  <td>${currentUserRole==='admin'||currentSellerPermissions.kick_customers?`<button class="${x.is_blocked?'secondary':'danger'}" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',${!x.is_blocked})">${x.is_blocked?'Mở khóa':'Kích khỏi shop'}</button>`:'Chỉ xem'}</td></tr>
+  <td>${currentUserRole==='admin' ? `<button class="${x.is_blocked?'secondary':'danger'}" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',${!x.is_blocked})">${x.is_blocked?'Mở khóa':'Kích khỏi shop'}</button>` : (x.is_blocked?'Chờ Admin mở khóa':`<button class="danger" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',true)">Kích khỏi shop</button>`)}</td></tr>
  `).join(''):'<tr><td colspan="5">Chưa có tài khoản. Khách cần đăng nhập shop ít nhất một lần.</td></tr>';
 }
 window.toggleShopCustomer=async(userId,blocked)=>{
- if(!confirm(blocked?'Khóa tài khoản này và buộc đăng xuất khỏi shop?':'Mở khóa tài khoản này?')) return;
+ if(currentUserRole==='sell' && !blocked){fail(Error('Sell không có quyền mở khóa khách. Chỉ Admin được mở khóa.'));return;}
+ if(!confirm(blocked?'Kích tài khoản này khỏi shop và chặn mua hàng?':'Mở khóa tài khoản này?')) return;
  try {
   const rpcName=currentUserRole==='sell'?'sell_set_shop_customer_blocked':'admin_set_shop_customer_blocked';
   const {data,error}=await db.rpc(rpcName,{p_user_id:userId,p_blocked:blocked});
