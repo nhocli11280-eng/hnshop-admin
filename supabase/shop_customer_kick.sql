@@ -141,6 +141,18 @@ drop trigger if exists trg_guard_blocked_shop_wallets on public.shop_customer_wa
 create trigger trg_guard_blocked_shop_wallets before update on public.shop_customer_wallets
 for each row execute function public.guard_blocked_shop_customer_write();
 
+create or replace function public.shop_get_game_config()
+returns jsonb language plpgsql stable security definer set search_path=''
+as $
+declare v_result jsonb;
+begin
+  perform public.assert_shop_customer_active();
+  select jsonb_build_object('prizes',prizes,'wheel_image_url',wheel_image_url,'blindbox_image_url',blindbox_image_url)
+  into v_result from public.shop_game_config where id=true;
+  return v_result;
+end;
+$;
+
 create or replace function public.shop_game_wallet_balance()
 returns numeric language plpgsql security definer set search_path=''
 as $$
@@ -210,6 +222,7 @@ revoke all on function public.admin_list_seller_permissions() from public,anon;
 revoke all on function public.admin_set_seller_permission(uuid,text,boolean) from public,anon;
 revoke all on function public.sell_get_my_permissions() from public,anon;
 revoke all on function public.shop_game_wallet_balance() from public,anon;
+revoke all on function public.shop_get_game_config() from public,anon;
 revoke all on function public.shop_list_my_wallet_topups() from public,anon;
 revoke all on function public.get_my_store_orders() from public,anon;
 revoke all on function public.admin_list_shop_customers() from public,anon;
@@ -220,6 +233,7 @@ grant execute on function public.admin_list_seller_permissions() to authenticate
 grant execute on function public.admin_set_seller_permission(uuid,text,boolean) to authenticated;
 grant execute on function public.sell_get_my_permissions() to authenticated;
 grant execute on function public.shop_game_wallet_balance() to authenticated;
+grant execute on function public.shop_get_game_config() to authenticated;
 grant execute on function public.shop_list_my_wallet_topups() to authenticated;
 grant execute on function public.get_my_store_orders() to authenticated;
 grant execute on function public.admin_list_shop_customers() to authenticated;
