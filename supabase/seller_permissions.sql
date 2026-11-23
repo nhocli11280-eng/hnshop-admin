@@ -11,6 +11,8 @@ create table if not exists public.seller_permissions (
   updated_at timestamptz not null default now()
 );
 
+alter table public.seller_permissions add column if not exists can_kick_customers boolean not null default false;
+
 alter table public.seller_permissions enable row level security;
 revoke all on public.seller_permissions from anon, authenticated;
 
