@@ -280,21 +280,35 @@ async function syncCustomerSession() {
   refreshAccountUI();
 }
 
+let accessCheckPromise = null;
+let shopAccessBlocked = false;
 async function enforceShopAccess() {
+  if (shopAccessBlocked) return false;
   if (!currentUser) return true;
-  const {data,error}=await db.rpc("check_shop_customer_access");
-  if(error) { console.warn("Không kiểm tra được quyền shop:",error.message); return false; }
-  if(data === false) {
-    await db.auth.signOut();
-    currentUser=null;
-    pendingPurchase=null;
-    refreshAccountUI();
-    purchaseMessage('<p class="purchase-warning">Tài khoản đã bị Admin khóa quyền truy cập HNShop. Vui lòng liên hệ quản trị viên.</p>');
-    accountMessage.textContent="Tài khoản đã bị khóa khỏi shop.";
-    showAccount();
-    return false;
-  }
-  return true;
+  if (accessCheckPromise) return accessCheckPromise;
+  accessCheckPromise = (async () => {
+    const {data,error}=await db.rpc("check_shop_customer_access");
+    if(error) {
+      console.warn("Không kiểm tra được quyền shop:",error.message);
+      return false;
+    }
+    if(data === false) {
+      shopAccessBlocked = true;
+      pendingPurchase = null;
+      closeModal();
+      closeGame();
+      await db.auth.signOut();
+      currentUser = null;
+      refreshAccountUI();
+      purchaseMessage('<p class="purchase-warning">Tài khoản đã bị Admin kích khỏi HNShop. Toàn bộ dịch vụ mua key, nạp ví, vòng quay, túi mù và lịch sử đều bị khóa. Chỉ có thể sử dụng lại khi Admin mở khóa hoặc đăng ký tài khoản mới.</p>');
+      accountMessage.textContent = "Tài khoản đã bị kích khỏi Shop. Vui lòng đăng ký tài khoản mới hoặc chờ Admin mở khóa.";
+      showAccount();
+      return false;
+    }
+    return true;
+  })();
+  try { return await accessCheckPromise; }
+  finally { accessCheckPromise = null; }
 }
 async function registerShopCustomer() {
   if(!currentUser) return;
@@ -371,7 +385,7 @@ db.auth.onAuthStateChange((_event,session)=>{
   if(session?.user) setTimeout(()=>registerShopCustomer(),0);
 });
 syncCustomerSession().then(()=>{if(currentUser) registerShopCustomer();}).catch(e=>console.error("Lỗi kiểm tra tài khoản",e));
-setInterval(()=>{if(currentUser) enforceShopAccess();},10000);
+setInterval(()=>{if(currentUser) enforceShopAccess();},1000);\ndocument.addEventListener("visibilitychange",()=>{if(!document.hidden && currentUser) enforceShopAccess();});\nwindow.addEventListener("focus",()=>{if(currentUser) enforceShopAccess();});
 
 
 /* CHECKOUT VÀ LỊCH SỬ KEY */
