@@ -6,6 +6,7 @@ create table if not exists public.seller_permissions (
   can_use_key_stock boolean not null default false,
   can_sell_keys boolean not null default false,
   can_view_orders boolean not null default false,
+  can_kick_customers boolean not null default false,
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now()
 );
@@ -19,7 +20,8 @@ returns table(
   username text,
   can_use_key_stock boolean,
   can_sell_keys boolean,
-  can_view_orders boolean
+  can_view_orders boolean,
+  can_kick_customers boolean
 )
 language plpgsql
 security definer
@@ -35,7 +37,8 @@ begin
          coalesce(u.raw_user_meta_data->>'username', split_part(u.email,'@',1))::text,
          coalesce(p.can_use_key_stock,false),
          coalesce(p.can_sell_keys,false),
-         coalesce(p.can_view_orders,false)
+         coalesce(p.can_view_orders,false),
+         coalesce(p.can_kick_customers,false)
   from auth.users u
   left join public.seller_permissions p on p.user_id=u.id
   where coalesce(u.raw_app_meta_data->>'role','')='sell'
@@ -59,7 +62,7 @@ begin
   if coalesce(auth.jwt()->'app_metadata'->>'role','') <> 'admin' then
     raise exception 'Chỉ Admin được cấp hoặc thu hồi quyền';
   end if;
-  if p_permission is null or p_permission not in ('key_stock','sell_keys','view_orders') then
+  if p_permission is null or p_permission not in ('key_stock','sell_keys','view_orders','kick_customers') then
     raise exception 'Loại quyền không hợp lệ';
   end if;
 
@@ -77,8 +80,10 @@ begin
     update public.seller_permissions set can_use_key_stock=p_enabled,updated_by=auth.uid(),updated_at=now() where user_id=p_user_id;
   elsif p_permission='sell_keys' then
     update public.seller_permissions set can_sell_keys=p_enabled,updated_by=auth.uid(),updated_at=now() where user_id=p_user_id;
-  else
+  elsif p_permission='view_orders' then
     update public.seller_permissions set can_view_orders=p_enabled,updated_by=auth.uid(),updated_at=now() where user_id=p_user_id;
+  else
+    update public.seller_permissions set can_kick_customers=p_enabled,updated_by=auth.uid(),updated_at=now() where user_id=p_user_id;
   end if;
   return true;
 end;
@@ -94,7 +99,7 @@ declare v_role text; v_result jsonb;
 begin
   v_role:=coalesce(auth.jwt()->'app_metadata'->>'role','');
   if v_role='admin' then
-    return jsonb_build_object('key_stock',true,'sell_keys',true,'view_orders',true);
+    return jsonb_build_object('key_stock',true,'sell_keys',true,'view_orders',true,'kick_customers',true);
   end if;
   if v_role<>'sell' or auth.uid() is null then
     raise exception 'Không có quyền truy cập';
@@ -102,7 +107,8 @@ begin
   select jsonb_build_object(
     'key_stock',coalesce(p.can_use_key_stock,false),
     'sell_keys',coalesce(p.can_sell_keys,false),
-    'view_orders',coalesce(p.can_view_orders,false)
+    'view_orders',coalesce(p.can_view_orders,false),
+    'kick_customers',coalesce(p.can_kick_customers,false)
   ) into v_result
   from (select auth.uid() as user_id) me
   left join public.seller_permissions p on p.user_id=me.user_id;
@@ -232,3 +238,37 @@ grant execute on function public.admin_set_seller_permission(uuid,text,boolean) 
 grant execute on function public.sell_get_my_permissions() to authenticated;
 grant execute on function public.sell_get_key_stock_summary() to authenticated;
 grant execute on function public.sell_list_shop_orders() to authenticated;
+
+
+-- Seller permission: kick/block customers from the Shop. Only blocks Shop access;
+-- it does not delete the customer account or erase orders.
+create or replace function public.sell_set_shop_customer_blocked(
+  p_user_id uuid,
+  p_blocked boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_allowed boolean := false;
+begin
+  if coalesce(auth.jwt()->'app_metadata'->>'role','')='admin' then
+    v_allowed:=true;
+  elsif coalesce(auth.jwt()->'app_metadata'->>'role','')='sell' then
+    select coalesce(p.can_kick_customers,false) into v_allowed
+    from (select auth.uid() as user_id) me
+    left join public.seller_permissions p on p.user_id=me.user_id;
+  end if;
+  if not coalesce(v_allowed,false) then
+    raise exception 'Admin chưa cấp quyền Kích khách khỏi Shop';
+  end if;
+  update public.shop_customer_access
+  set is_blocked=p_blocked
+  where user_id=p_user_id;
+  return found;
+end;
+$$;
+
+revoke all on function public.sell_set_shop_customer_blocked(uuid,boolean) from public;
+grant execute on function public.sell_set_shop_customer_blocked(uuid,boolean) to authenticated;
