@@ -280,29 +280,37 @@ async function syncCustomerSession() {
   refreshAccountUI();
 }
 
+async function denyShopAccess(message) {
+  try { await db.auth.signOut(); } catch (_) {}
+  currentUser=null;
+  pendingPurchase=null;
+  refreshAccountUI();
+  purchaseMessage('<p class="purchase-warning">Tài khoản không được phép truy cập HNShop. Vui lòng liên hệ quản trị viên.</p>');
+  accountMessage.textContent=message || "Tài khoản đã bị khóa khỏi shop.";
+  showAccount();
+  return false;
+}
 async function enforceShopAccess() {
   if (!currentUser) return true;
   const {data,error}=await db.rpc("check_shop_customer_access");
-  if(error) { console.warn("Không kiểm tra được quyền shop:",error.message); return false; }
-  if(data === false) {
-    await db.auth.signOut();
-    currentUser=null;
-    pendingPurchase=null;
-    refreshAccountUI();
-    purchaseMessage('<p class="purchase-warning">Tài khoản đã bị Admin khóa quyền truy cập HNShop. Vui lòng liên hệ quản trị viên.</p>');
-    accountMessage.textContent="Tài khoản đã bị khóa khỏi shop.";
-    showAccount();
-    return false;
+  if(error) {
+    console.warn("Không kiểm tra được quyền shop:",error.message);
+    return denyShopAccess("Không xác minh được quyền truy cập. Vui lòng đăng nhập lại sau.");
   }
+  if(data !== true) return denyShopAccess("Tài khoản đã bị khóa khỏi shop.");
   return true;
 }
 async function registerShopCustomer() {
-  if(!currentUser) return;
+  if(!currentUser) return false;
   const {data,error}=await db.rpc("register_shop_customer",{
     p_username:currentUser.user_metadata?.username || currentUser.email || "Khách hàng"
   });
-  if(error) { console.warn("Không ghi nhận được tài khoản:",error.message); return; }
-  if(data === false) await enforceShopAccess();
+  if(error) {
+    console.warn("Không ghi nhận được tài khoản:",error.message);
+    return denyShopAccess("Không xác minh được quyền tài khoản. Vui lòng thử lại sau.");
+  }
+  if(data !== true) return enforceShopAccess();
+  return enforceShopAccess();
 }
 
 document.getElementById("accountOpen").addEventListener("click",showAccount);
@@ -321,6 +329,8 @@ document.getElementById("accountLogin").addEventListener("click",async()=>{
     const {data,error}=await db.auth.signInWithPassword({email:loginId,password});
     if(error) throw error;
     currentUser=data.user;
+    refreshAccountUI();
+    if (!(await registerShopCustomer())) return;
     accountMessage.textContent="Đăng nhập thành công.";
     refreshAccountUI();
     if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
@@ -341,6 +351,8 @@ document.getElementById("accountSignup").addEventListener("click",async()=>{
     if(error) throw error;
     if(data.session) {
       currentUser=data.user;
+      refreshAccountUI();
+      if (!(await registerShopCustomer())) return;
       accountMessage.textContent="Tạo tài khoản thành công và đã đăng nhập.";
       refreshAccountUI();
       if (pendingPurchase) { const p = pendingPurchase; pendingPurchase = null; await createCustomerOrder(p); }
