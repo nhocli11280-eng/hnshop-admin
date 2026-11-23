@@ -101,6 +101,21 @@ begin
 end;
 $$;
 
+create or replace function public.guard_blocked_shop_order_fulfillment()
+returns trigger language plpgsql security definer set search_path=''
+as $
+begin
+  if new.status='fulfilled' and old.status is distinct from new.status
+     and exists(select 1 from public.shop_customer_access c where c.user_id=new.user_id and c.is_blocked is true) then
+    raise exception 'Khách hàng đã bị kích khỏi Shop. Không thể xác nhận thanh toán hoặc cấp key.';
+  end if;
+  return new;
+end;
+$;
+drop trigger if exists trg_guard_blocked_shop_fulfillment on public.store_orders;
+create trigger trg_guard_blocked_shop_fulfillment before update of status on public.store_orders
+for each row execute function public.guard_blocked_shop_order_fulfillment();
+
 create or replace function public.guard_blocked_shop_customer_write()
 returns trigger language plpgsql security definer set search_path=''
 as $$
@@ -188,6 +203,7 @@ $$;
 
 revoke all on function public.assert_shop_customer_active() from public,anon,authenticated;
 revoke all on function public.guard_blocked_shop_customer_write() from public,anon,authenticated;
+revoke all on function public.guard_blocked_shop_order_fulfillment() from public,anon,authenticated;
 revoke all on function public.sell_list_shop_customers() from public,anon;
 revoke all on function public.sell_set_shop_customer_blocked(uuid,boolean) from public,anon;
 revoke all on function public.admin_list_seller_permissions() from public,anon;
