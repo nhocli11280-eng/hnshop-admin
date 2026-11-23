@@ -268,10 +268,6 @@ begin
   if not coalesce(v_allowed,false) then
     raise exception 'Admin chưa cấp quyền Kích khách khỏi Shop';
   end if;
-  -- Seller chỉ được kích khách; mở khóa luôn dành riêng cho Admin.
-  if coalesce(auth.jwt()->'app_metadata'->>'role','')='sell' and p_blocked is distinct from true then
-    raise exception 'Sell không có quyền mở khóa khách. Chỉ Admin được mở khóa.';
-  end if;
   update public.shop_customer_access
   set is_blocked=p_blocked
   where user_id=p_user_id;
