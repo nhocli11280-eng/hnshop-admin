@@ -16,7 +16,10 @@ alter table public.seller_permissions add column if not exists can_kick_customer
 alter table public.seller_permissions enable row level security;
 revoke all on public.seller_permissions from anon, authenticated;
 
-create or replace function public.admin_list_seller_permissions()
+-- Drop the old OUT-parameter row type before changing its returned columns.
+drop function if exists public.admin_list_seller_permissions();
+
+create function public.admin_list_seller_permissions()
 returns table(
   user_id uuid,
   username text,
