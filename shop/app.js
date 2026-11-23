@@ -2,7 +2,11 @@
 const SUPABASE_URL = "https://tovdhcylsajhamscnmdm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Q6StOz8xw0PK91aAgPAwyQ_lTRl0rU_";
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Tách phiên đăng nhập Shop khỏi phiên Admin/Seller trên cùng domain.
+// Người dùng Shop cần đăng nhập lại một lần sau thay đổi này.
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storageKey: "hnshop-shop-auth-v1" }
+});
 
 const grid = document.getElementById("productGrid");
 const search = document.getElementById("searchInput");
