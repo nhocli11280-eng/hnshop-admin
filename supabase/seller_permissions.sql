@@ -274,3 +274,34 @@ $$;
 
 revoke all on function public.sell_set_shop_customer_blocked(uuid,boolean) from public;
 grant execute on function public.sell_set_shop_customer_blocked(uuid,boolean) to authenticated;
+
+
+-- Return the customer UUID as well, so an authorized Seller can target the
+-- correct Shop account when using the kick permission.
+drop function if exists public.sell_list_shop_customers();
+create function public.sell_list_shop_customers()
+returns table(user_id uuid,username text,email text,is_blocked boolean,created_at timestamptz)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt()->'app_metadata'->>'role','') not in ('sell','admin') then
+    raise exception 'Không có quyền truy cập';
+  end if;
+  if coalesce(auth.jwt()->'app_metadata'->>'role','')='sell' then
+    if not exists (
+      select 1 from public.seller_permissions p
+      where p.user_id=auth.uid() and p.can_kick_customers is true
+    ) then
+      raise exception 'Admin chưa cấp quyền Kích khách khỏi Shop';
+    end if;
+  end if;
+  return query
+  select c.user_id,c.username,c.email,c.is_blocked,c.created_at
+  from public.shop_customer_access c
+  order by c.created_at desc;
+end;
+$$;
+revoke all on function public.sell_list_shop_customers() from public;
+grant execute on function public.sell_list_shop_customers() to authenticated;
