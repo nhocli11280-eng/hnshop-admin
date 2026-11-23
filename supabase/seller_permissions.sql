@@ -292,14 +292,6 @@ begin
   if coalesce(auth.jwt()->'app_metadata'->>'role','') not in ('sell','admin') then
     raise exception 'Không có quyền truy cập';
   end if;
-  if coalesce(auth.jwt()->'app_metadata'->>'role','')='sell' then
-    if not exists (
-      select 1 from public.seller_permissions p
-      where p.user_id=auth.uid() and p.can_kick_customers is true
-    ) then
-      raise exception 'Admin chưa cấp quyền Kích khách khỏi Shop';
-    end if;
-  end if;
   return query
   select c.user_id,c.username,c.email,c.is_blocked,c.created_at
   from public.shop_customer_access c
