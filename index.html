@@ -272,15 +272,6 @@ tr:hover td{background:rgba(0,145,220,.055)}
   #sellMonitor .stat strong{font-size:18px}
 }
 
-@media(max-width:700px){
- #sellerPermissionsTable thead{display:none}
- #sellerPermissionsTable,#sellerPermissionsTable tbody,#sellerPermissionsTable tr,#sellerPermissionsTable td{display:block;width:100%;box-sizing:border-box}
- #sellerPermissionsTable tr{border:1px solid #38516a;border-radius:10px;margin:10px 0;padding:8px;background:rgba(255,255,255,.025)}
- #sellerPermissionsTable td{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.1)}
- #sellerPermissionsTable td:last-child{border-bottom:0}
- #sellerPermissionsTable td:before{content:attr(data-label);font-weight:600;text-align:left}
- #sellerPermissionsTable td input{margin-left:auto;flex:0 0 auto}
-}
 </style>
 </head>
 <body>
@@ -324,7 +315,6 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <button data-page="walletTopups" id="walletTopupsNav">Duyệt nạp ví</button>
 <button data-page="sellOrders" id="sellOrdersNav" class="hidden">Đơn hàng Shop</button>
 <button data-page="sellKeyStock" id="sellKeyStockNav" class="hidden">Kho key sản phẩm</button>
-<button data-page="customerAccess" id="sellCustomerKickNav" class="hidden">Kích khách khỏi Shop</button>
 <button data-page="sellMonitor" id="sellMonitorNav" class="hidden">Theo dõi hệ thống & khách mua key</button>
 </nav>
 
@@ -531,8 +521,8 @@ tr:hover td{background:rgba(0,145,220,.055)}
 <p>Bật hoặc tắt riêng từng quyền cho từng tài khoản Seller. Thu hồi quyền sẽ có hiệu lực khi Seller đồng bộ quyền.</p>
 <button id="refreshSellerPermissions" class="secondary" type="button">Làm mới danh sách</button>
 <p id="sellerPermissionsMessage" aria-live="polite"></p>
-<div class="table-wrap"><table id="sellerPermissionsTable"><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th><th>Kích khách khỏi Shop</th></tr></thead>
-<tbody id="sellerPermissionsRows"><tr><td colspan="5">Đang tải...</td></tr></tbody></table></div></div></section>
+<div class="table-wrap"><table><thead><tr><th>Tài khoản Seller</th><th>Kho key</th><th>Bán key</th><th>Xem đơn</th></tr></thead>
+<tbody id="sellerPermissionsRows"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div></div></section>
 <section id="walletTopups" class="page hidden">
 <h2>Duyệt yêu cầu nạp ví</h2>
 <div class="panel">
@@ -727,11 +717,9 @@ async function verifyAdmin() {
   if(permissionError) throw permissionError;
   currentSellerPermissions=permissions||{key_stock:false,sell_keys:false,view_orders:false};
   document.querySelectorAll('nav button').forEach(btn => btn.classList.add('hidden'));
-  $('customerAccessNav')?.classList.add('hidden');
   $('sellMonitorNav').classList.remove('hidden');
   if(currentSellerPermissions.view_orders||currentSellerPermissions.sell_keys) $('sellOrdersNav').classList.remove('hidden');
   if(currentSellerPermissions.key_stock) $('sellKeyStockNav').classList.remove('hidden');
-  if(currentSellerPermissions.kick_customers) { $('sellCustomerKickNav').classList.remove('hidden'); $('customerAccessNav')?.classList.add('hidden'); }
   $('sellMonitorNav').classList.add('active');
   document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
   $('sellMonitor').classList.remove('hidden');
@@ -742,7 +730,6 @@ async function verifyAdmin() {
   startSellAutoRefresh();
  } else {
   document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('hidden'));
-  $('sellCustomerKickNav').classList.add('hidden');
   $('sellMonitorNav').classList.add('hidden');
   $('sellMonitor').classList.add('hidden');
   $('sellStaffNav').classList.remove('hidden');
@@ -1819,23 +1806,20 @@ async function loadCustomers() {
 
 /* QUẢN LÝ KHÓA TÀI KHOẢN SHOP */
 async function loadCustomerAccess() {
- const rpcName=currentUserRole==='sell'?'sell_list_shop_customers':'admin_list_shop_customers';
- const {data,error}=await db.rpc(rpcName);
+ const {data,error}=await db.rpc('admin_list_shop_customers');
  if(error) throw error;
  const rows=Array.isArray(data)?data:[];
  $('customerAccessRows').innerHTML=rows.length?rows.map(x=>`
   <tr><td>${escapeHTML(x.username || 'Khách hàng')}</td>
   <td>${escapeHTML(x.email || '')}</td><td>${date(x.created_at)}</td>
   <td>${x.is_blocked?'Đã khóa':'Đang hoạt động'}</td>
-  <td>${currentUserRole==='admin'||currentSellerPermissions.kick_customers ? `<button class="${x.is_blocked?'secondary':'danger'}" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',${!x.is_blocked})">${x.is_blocked?'Mở khóa':'Kích khỏi shop'}</button>` : 'Chỉ xem'}</td></tr>
+  <td><button class="${x.is_blocked?'secondary':'danger'}" onclick="toggleShopCustomer('${escapeHTML(x.user_id)}',${!x.is_blocked})">${x.is_blocked?'Mở khóa':'Kích khỏi shop'}</button></td></tr>
  `).join(''):'<tr><td colspan="5">Chưa có tài khoản. Khách cần đăng nhập shop ít nhất một lần.</td></tr>';
 }
 window.toggleShopCustomer=async(userId,blocked)=>{
- if(currentUserRole==='sell' && !currentSellerPermissions.kick_customers){fail(Error('Admin chưa cấp quyền Kích khách khỏi Shop.'));return;}
- if(!confirm(blocked?'Kích tài khoản này khỏi shop và chặn mua hàng?':'Mở khóa tài khoản này?')) return;
+ if(!confirm(blocked?'Khóa tài khoản này và buộc đăng xuất khỏi shop?':'Mở khóa tài khoản này?')) return;
  try {
-  const rpcName=currentUserRole==='sell'?'sell_set_shop_customer_blocked':'admin_set_shop_customer_blocked';
-  const {data,error}=await db.rpc(rpcName,{p_user_id:userId,p_blocked:blocked});
+  const {data,error}=await db.rpc('admin_set_shop_customer_blocked',{p_user_id:userId,p_blocked:blocked});
   if(error) throw error;
   if(data!==true) throw Error('Không tìm thấy tài khoản.');
   await loadCustomerAccess();
@@ -1903,17 +1887,16 @@ $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage')
 
 /* ADMIN: PHÂN QUYỀN RIÊNG CHO TỪNG SELLER */
 async function loadSellerPermissions(){
- $('sellerPermissionsRows').innerHTML='<tr><td colspan="5">Đang tải...</td></tr>';
+ $('sellerPermissionsRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
  $('sellerPermissionsMessage').textContent='';
  const {data,error}=await db.rpc('admin_list_seller_permissions');
  if(error) throw error;
  const rows=Array.isArray(data)?data:[];
  $('sellerPermissionsRows').innerHTML=rows.length?rows.map(x=>`
-  <tr><td data-label="Tài khoản Seller">${escapeHTML(x.username||x.user_id)}</td>
-   <td data-label="Kho key"><input type="checkbox" style="width:auto" ${x.can_use_key_stock?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','key_stock',this.checked)"></td>
-   <td data-label="Bán key"><input type="checkbox" style="width:auto" ${x.can_sell_keys?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','sell_keys',this.checked)"></td>
-   <td data-label="Xem đơn"><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td>
-   <td data-label="Kích khách khỏi Shop"><input type="checkbox" style="width:auto" ${x.can_kick_customers?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','kick_customers',this.checked)"></td></tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản Seller.</td></tr>';
+  <tr><td>${escapeHTML(x.username||x.user_id)}</td>
+   <td><input type="checkbox" style="width:auto" ${x.can_use_key_stock?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','key_stock',this.checked)"></td>
+   <td><input type="checkbox" style="width:auto" ${x.can_sell_keys?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','sell_keys',this.checked)"></td>
+   <td><input type="checkbox" style="width:auto" ${x.can_view_orders?'checked':''} onchange="setSellerPermission('${escapeHTML(x.user_id)}','view_orders',this.checked)"></td></tr>`).join(''):'<tr><td colspan="4">Chưa có tài khoản Seller.</td></tr>';
  $('sellerPermissionsMessage').textContent='Đang quản lý '+rows.length+' tài khoản Seller.';
 }
 window.setSellerPermission=async(userId,permission,enabled)=>{
