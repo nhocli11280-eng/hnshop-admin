@@ -1892,7 +1892,7 @@ $('refreshSellStaff').onclick=()=>loadSellStaff().catch(e=>$('sellStaffMessage')
 
 /* ADMIN: PHÂN QUYỀN RIÊNG CHO TỪNG SELLER */
 async function loadSellerPermissions(){
- $('sellerPermissionsRows').innerHTML='<tr><td colspan="4">Đang tải...</td></tr>';
+ $('sellerPermissionsRows').innerHTML='<tr><td colspan="5">Đang tải...</td></tr>';
  $('sellerPermissionsMessage').textContent='';
  const {data,error}=await db.rpc('admin_list_seller_permissions');
  if(error) throw error;
