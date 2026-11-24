@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#061326">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HN Admin">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>HN Admin iOS</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061326}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#admin{display:block;width:100%;height:100%;height:100dvh;border:0;background:#061326}
+#offline{display:none;position:fixed;inset:0;z-index:2;background:#061326;color:#eaf7ff;font:16px -apple-system,BlinkMacSystemFont,sans-serif;padding:32px 24px;text-align:center}
+</style>
+</head>
+<body>
+<iframe id="admin" title="HNShop Admin" src="../index.html" allow="clipboard-read; clipboard-write"></iframe>
+<div id="offline"><h2>HN Admin</h2><p>Cần kết nối Internet để đăng nhập và quản lý dữ liệu.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#087fb5;color:white;font-size:16px">Thử lại</button></div>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+window.addEventListener('offline',()=>document.getElementById('offline').style.display='block');
+window.addEventListener('online',()=>document.getElementById('offline').style.display='none');
+</script>
+</body>
+</html>
