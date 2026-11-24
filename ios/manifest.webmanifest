@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "HNShop Admin",
+  "short_name": "HN Admin",
+  "description": "Quản lý HNShop trên iPhone và iPad",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#061326",
+  "theme_color": "#061326",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
